@@ -138,6 +138,10 @@
 
       <div class="row">
         <button class="primary" id="btn-random">Tirer un verset</button>
+        <button id="btn-preload" class="ghost" style="flex:1">Télécharger tout (Offline)</button>
+      </div>
+      
+      <div class="row">
         <button id="btn-diagnose">Diagnostiquer API</button>
         <div class="muted" id="status">Prêt.</div>
       </div>
@@ -173,38 +177,207 @@ const CHUNK_SIZE=4;
 const DEFAULT_RECENCY=30;
 let suppressCardClickUntil=0;
 
+// Utilisation de la liste des proxies pour la résilience.
 const PROXIES=[(url)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,(url)=>`https://cors.isomorphic-git.org/${url}`,(url)=>`https://thingproxy.freeboard.io/fetch/${url}`];
 async function fetchJSONWithFallback(url, opts={}){ try{ const r=await fetch(url,opts); if(r.ok) return r.json(); throw new Error(`HTTP ${r.status}`);}catch(e){ for(const wrap of PROXIES){ try{ const r=await fetch(wrap(url),opts); if(r.ok) return r.json(); }catch(_){} } throw e; } }
 
-const API={ sutanlab:{ surahList:'https://api.quran.sutanlab.id/surah', juz:(n)=>`https://api.quran.sutanlab.id/juz/${n}`, surahAyah:(s,a)=>`https://api.quran.sutanlab.id/surah/${s}/${a}` }, alquran:{ surahList:'https://api.alquran.cloud/v1/surah', juz:(n)=>`https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`, ayahAr:(s,a)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani`, ayahTr:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`, ayahAudio:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}` }, githubRaw:{ surah:(s)=>`https://raw.githubusercontent.com/semarketir/quranjson/master/source/surah/surah_${s}.json` } };
+const API={ 
+  sutanlab:{ 
+    surahList:'https://api.quran.sutanlab.id/surah', 
+    juz:(n)=>`https://api.quran.sutanlab.id/juz/${n}`, 
+    surahAyah:(s,a)=>`https://api.quran.sutanlab.id/surah/${s}/${a}` 
+  }, 
+  alquran:{ 
+    surahList:'https://api.alquran.cloud/v1/surah', 
+    juz:(n)=>`https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`, 
+    ayahAr:(s,a)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani`, 
+    ayahTr:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`, 
+    ayahAudio:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}` 
+  }, 
+  githubRaw:{ 
+    surah:(s)=>`https://raw.githubusercontent.com/semarketir/quranjson/master/source/surah/surah_${s}.json` 
+  } 
+};
 
 const Cache={ surahs:null, juzMap:new Map(), ayahText:new Map(), surahIndex:[] };
 
+// Classe SmartShuffle
 class SmartShuffle{ constructor(items=[],historySize=DEFAULT_RECENCY){ this.hist=[]; this.ptr=-1; this.historySize=historySize; this.all=[]; this.bag=[]; this.set(items); } set(items){ this.all=uniq(items); this._refill(); } setHistorySize(n){ this.historySize=Math.max(0,n|0); } _fy(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } } _refill(){ this.bag=this.all.slice(); this._fy(this.bag); const last=(this.hist && this.hist.length)? this.hist[this.hist.length-1] : undefined; if(this.bag.length>1 && last!==undefined && this.bag[0]===last){ const j=Math.floor(Math.random()*(this.bag.length-1))+1; [this.bag[0],this.bag[j]]=[this.bag[j],this.bag[0]]; } } next(smart=true){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.hist=this.hist.slice(0,this.ptr+1);} if(!this.bag.length) this._refill(); let idx=0; if(smart && this.historySize>0){ const recent=new Set(this.hist.slice(-this.historySize)); idx=this.bag.findIndex(x=>!recent.has(x)); if(idx===-1) idx=0; } else { idx=Math.floor(Math.random()*this.bag.length);} const picked=this.bag.splice(idx,1)[0]; this.hist.push(picked); this.ptr=this.hist.length-1; return picked; } prev(){ if(this.ptr>0){ this.ptr--; return this.hist[this.ptr]; } return null; } forward(){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.ptr++; return this.hist[this.ptr]; } return null; } }
 
 function ayahKey(s,a){ return `${s}:${a}` }
 
-async function loadSurahList(){ if(Cache.surahs) return Cache.surahs; try{ const j=await fetchJSONWithFallback(API.sutanlab.surahList); if(j && j.data){ Cache.surahs=j.data.map(x=>({number:x.number, nameAr:x.name.short||x.name, nameEn:x.name.transliteration?.en||x.englishName, numberOfAyahs:x.numberOfVerses||x.numberOfAyahs})); return Cache.surahs; } }catch(_){ } try{ const a=await fetchJSONWithFallback(API.alquran.surahList); Cache.surahs=a.data.map(x=>({number:x.number, nameAr:x.name, nameEn:x.englishName, numberOfAyahs:x.numberOfAyahs})); return Cache.surahs; }catch(_){ } Cache.surahs=[...Array(114)].map((_,i)=>({number:i+1,nameAr:`سورة ${i+1}`,nameEn:`Surah ${i+1}`,numberOfAyahs:200})); return Cache.surahs; }
+async function loadSurahList(){ 
+  if(Cache.surahs) return Cache.surahs; 
+  try{ 
+    const j=await fetchJSONWithFallback(API.sutanlab.surahList); 
+    if(j && j.data){ 
+      Cache.surahs=j.data.map(x=>({number:x.number, nameAr:x.name.short||x.name, nameEn:x.name.transliteration?.en||x.englishName, numberOfAyahs:x.numberOfVerses||x.numberOfAyahs, numberOfAyahsActual: x.numberOfVerses||x.numberOfAyahs})); 
+      return Cache.surahs; 
+    } 
+  }catch(_){ } 
+  // Fallback API
+  try{ 
+    const a=await fetchJSONWithFallback(API.alquran.surahList); 
+    Cache.surahs=a.data.map(x=>({number:x.number, nameAr:x.name, nameEn:x.englishName, numberOfAyahs:x.numberOfAyahs, numberOfAyahsActual: x.numberOfAyahs})); 
+    return Cache.surahs; 
+  }catch(_){ } 
+  // Fallback si tout échoue (devrait être suffisant pour charger l'App Shell)
+  Cache.surahs=[...Array(114)].map((_,i)=>({number:i+1,nameAr:`سورة ${i+1}`,nameEn:`Surah ${i+1}`,numberOfAyahs:200,numberOfAyahsActual:200})); 
+  return Cache.surahs; 
+}
 
-async function buildSurahChecks(){ const list = await loadSurahList(); Cache.surahIndex = list.map(s=>({ value: String(s.number), label: `${pretty(s.number)} · ${s.nameEn||''} — ${s.nameAr||''}`.trim(), n: s.number, count: s.numberOfAyahs||200 })); const box = byId('surahChecks'); box.innerHTML=''; const frag=document.createDocumentFragment(); for(const it of Cache.surahIndex){ const lab=document.createElement('label'); lab.className='chk'; lab.dataset.label=it.label.toLowerCase(); const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.value; cb.name='surah'; const span=document.createElement('span'); span.textContent=it.label; lab.appendChild(cb); lab.appendChild(span); frag.appendChild(lab); } box.appendChild(frag); const first=box.querySelector('input[type="checkbox"]'); if(first){ first.checked=true; } }
+async function buildSurahChecks(){ 
+  const list = await loadSurahList(); 
+  Cache.surahIndex = list.map(s=>({ 
+    value: String(s.number), 
+    label: `${pretty(s.number)} · ${s.nameEn||''} — ${s.nameAr||''}`.trim(), 
+    n: s.number, 
+    count: s.numberOfAyahsActual||s.numberOfAyahs||200 // Utilise la meilleure estimation du nombre de versets
+  })); 
+  const box = byId('surahChecks'); 
+  box.innerHTML=''; 
+  const frag=document.createDocumentFragment(); 
+  for(const it of Cache.surahIndex){ 
+    const lab=document.createElement('label'); lab.className='chk'; 
+    lab.dataset.label=it.label.toLowerCase(); 
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.value; cb.name='surah'; 
+    const span=document.createElement('span'); span.textContent=it.label; 
+    lab.appendChild(cb); lab.appendChild(span); frag.appendChild(lab); 
+  } 
+  box.appendChild(frag); 
+  const first=box.querySelector('input[type="checkbox"]'); 
+  if(first){ first.checked=true; } 
+}
 
-function filterSurahChecks(query){ const q=(query||'').toLowerCase().trim(); const items = byId('surahChecks').querySelectorAll('.chk'); items.forEach(l=>{ const match = !q || (l.dataset.label||'').includes(q); l.style.display = match? 'flex':'none'; }); }
-function setAllChecks(containerId, checked){ const box = byId(containerId); box.querySelectorAll('input[type="checkbox"]').forEach(cb=>{ cb.checked=!!checked; }); box.dispatchEvent(new Event('change')); }
-function selectedFromChecks(containerId){ return Array.from(byId(containerId).querySelectorAll('input[type="checkbox"]:checked')).map(cb=>cb.value); }
+function filterSurahChecks(query){ 
+  const q=(query||'').toLowerCase().trim(); 
+  const items = byId('surahChecks').querySelectorAll('.chk'); 
+  items.forEach(l=>{ 
+    const match = !q || (l.dataset.label||'').includes(q); 
+    l.style.display = match? 'flex':'none'; 
+  }); 
+}
+function setAllChecks(containerId, checked){ 
+  const box = byId(containerId); 
+  box.querySelectorAll('input[type="checkbox"]').forEach(cb=>{ cb.checked=!!checked; }); 
+  box.dispatchEvent(new Event('change')); 
+}
+function selectedFromChecks(containerId){ 
+  return Array.from(byId(containerId).querySelectorAll('input[type="checkbox"]:checked')).map(cb=>cb.value); 
+}
 
-async function loadJuz(j){ const key = String(j); if(Cache.juzMap.has(key)) return Cache.juzMap.get(key); try{ const d=await fetchJSONWithFallback(API.sutanlab.juz(j)); if(d && d.data){ const verses=d.data.verses||d.data.ayahs||[]; const list=verses.map(v=>({ s:v.surah?.number||v.number?.surah||v.surahNumber||v.surah?.number||v.surah?.id, a:v.number?.inSurah||v.numberInSurah||v.verseNumber })).filter(x=>+x.s&&+x.a); Cache.juzMap.set(key,list); return list; } }catch(_){ } const a=await fetchJSONWithFallback(API.alquran.juz(j)); const list=(a.data.ayahs||[]).map(v=>({ s:v.surah.number, a:v.numberInSurah })); Cache.juzMap.set(key,list); return list; }
+async function loadJuz(j){ 
+  const key = String(j); 
+  if(Cache.juzMap.has(key)) return Cache.juzMap.get(key); 
+  try{ 
+    const d=await fetchJSONWithFallback(API.sutanlab.juz(j)); 
+    if(d && d.data){ 
+      const verses=d.data.verses||d.data.ayahs||[]; 
+      const list=verses.map(v=>({ s:v.surah?.number||v.number?.surah||v.surahNumber||v.surah?.number||v.surah?.id, a:v.number?.inSurah||v.numberInSurah||v.verseNumber })).filter(x=>+x.s&&+x.a); 
+      Cache.juzMap.set(key,list); 
+      return list; 
+    } 
+  }catch(_){ } 
+  const a=await fetchJSONWithFallback(API.alquran.juz(j)); 
+  const list=(a.data.ayahs||[]).map(v=>({ s:v.surah.number, a:v.numberInSurah })); 
+  Cache.juzMap.set(key,list); 
+  return list; 
+}
 
-async function getAyah(s,a,trEd,reciterEd){ const k=ayahKey(s,a); const c=Cache.ayahText.get(`${k}:${trEd}:${reciterEd}`); if(c) return c; let arabic="", tr="", audio=""; try{ const j=await fetchJSONWithFallback(API.alquran.ayahAr(s,a)); arabic=j?.data?.text||""; }catch(_){} if(!arabic){ try{ const j2=await fetchJSONWithFallback(API.sutanlab.surahAyah(s,a)); arabic=j2?.data?.text?.arab||j2?.data?.text||""; }catch(_){} } if(!arabic){ try{ const g=await fetchJSONWithFallback(API.githubRaw.surah(s)); arabic=g?.verses?.[a-1]?.text||g?.data?.[a-1]?.text||""; }catch(_){} } if(trEd && trEd!=='none'){ try{ const t=await fetchJSONWithFallback(API.alquran.ayahTr(s,a,trEd)); tr=t?.data?.text||""; }catch(_){} } try{ const au=await fetchJSONWithFallback(API.alquran.ayahAudio(s,a,reciterEd||'ar.alafasy')); audio=au?.data?.audio||""; }catch(_){} const out={arabic:arabic||'(texte indisponible)',tr,audio,trEdition:trEd,reciter:reciterEd}; Cache.ayahText.set(`${k}:${trEd}:${reciterEd}`,out); return out; }
+/**
+ * Récupère le texte, la traduction et l'audio d'un verset.
+ * Utilise Sutanlab pour le texte/audio s'il est disponible, Alquran.cloud pour la traduction.
+ * @param {number} s Numéro de sourate
+ * @param {number} a Numéro de verset
+ * @param {string} trEd Édition de traduction
+ * @param {string} reciterEd Édition du récitateur
+ */
+async function getAyah(s,a,trEd,reciterEd){ 
+  const k=ayahKey(s,a); 
+  // La mise en cache interne dans Cache.ayahText n'est plus nécessaire car le SW gère le cache HTTP
+  
+  let arabic="", tr="", audio=""; 
+  
+  // 1. Récupération du Texte Arabe + Audio (via Alquran.cloud, plus fiable pour l'audio)
+  try{ 
+    const audioEdition = reciterEd;
+    const arabicEdition = 'quran-uthmani'; // Texte Othmani
+    
+    // Requête pour Arabe et Audio
+    const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${arabicEdition},${audioEdition}`);
+    if(r && r.data){
+      // Utilisation du premier élément (Arabe)
+      arabic = r.data.ayahs[0].text || ""; 
+      // L'URL audio est dans le deuxième élément (Audio)
+      audio = r.data.ayahs[1]?.audio || ""; 
+    }
+  }catch(_){}
+  
+  // 2. Récupération de la Traduction
+  if(trEd && trEd!=='none'){ 
+    try{ 
+      const t=await fetchJSONWithFallback(API.alquran.ayahTr(s,a,trEd)); 
+      tr=t?.data?.text||""; 
+    }catch(_){} 
+  } 
 
-const els={ main:byId('main'), controls: byId('controls'), btnBack: byId('btn-back'), brand: document.getElementById('brand-home'), modeJuz: byId('mode-juz'), modeSurah: byId('mode-surah'), fieldJuz: byId('field-juz'), fieldSurah: byId('field-surah'), juzChecks: byId('juzChecks'), surahChecks: byId('surahChecks'), surahSearch: byId('surahSearch'), translation: byId('translation'), reciter: byId('reciter'), btnRand: byId('btn-random'), btnReroll: byId('btn-reroll'), btnNext: byId('btn-next'), btnDiag: byId('btn-diagnose'), status: byId('status'), meta: byId('meta'), ar: byId('ar'), tr: byId('tr'), chunk: byId('chunk'), audio: byId('audio'), poolInfo: byId('poolInfo'), card: byId('card'), juzAll: byId('juz-all'), surahAll: byId('surah-all') };
-let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1; let revealMeta=false; let chunkBaseSurah=null, chunkStartAyah=null;
+  // Fallback si Alquran.cloud échoue complètement pour l'Arabe (très rare)
+  if(!arabic){ 
+    try{ 
+      const j2=await fetchJSONWithFallback(API.sutanlab.surahAyah(s,a)); 
+      arabic=j2?.data?.text?.arab||j2?.data?.text||""; 
+    }catch(_){} 
+  }
 
-function setStatus(text,spin=false){ if(!els.status) return; els.status.innerHTML = spin ? `<span class=\"spinner\"></span> ${text}` : text; }
-function renderPoolInfo(){ const surahCount = new Set(pool.map(k=>+k.split(':')[0])).size; els.poolInfo.textContent = `Pool: ${pool.length} versets · ${surahCount} sourate(s)`; }
+  const out={arabic:arabic||'(texte indisponible)',tr,audio,trEdition:trEd,reciter:reciterEd}; 
+  // Pas de Cache.ayahText.set(), le SW s'en charge.
+  return out; 
+}
+
+const els={ 
+  main:byId('main'), controls: byId('controls'), btnBack: byId('btn-back'), brand: document.getElementById('brand-home'), 
+  modeJuz: byId('mode-juz'), modeSurah: byId('mode-surah'), 
+  fieldJuz: byId('field-juz'), fieldSurah: byId('field-surah'), 
+  juzChecks: byId('juzChecks'), surahChecks: byId('surahChecks'), surahSearch: byId('surahSearch'), 
+  translation: byId('translation'), reciter: byId('reciter'), 
+  btnRand: byId('btn-random'), btnReroll: byId('btn-reroll'), btnNext: byId('btn-next'), 
+  btnDiag: byId('btn-diagnose'), btnPreload: byId('btn-preload'), // Nouveau bouton
+  status: byId('status'), meta: byId('meta'), ar: byId('ar'), tr: byId('tr'), chunk: byId('chunk'), 
+  audio: byId('audio'), poolInfo: byId('poolInfo'), card: byId('card'), 
+  juzAll: byId('juz-all'), surahAll: byId('surah-all') 
+};
+let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1; 
+let revealMeta=false; 
+let chunkBaseSurah=null, chunkStartAyah=null;
+let isPreloading = false; // État pour éviter les clics multiples
+
+function setStatus(text,spin=false){ 
+  if(!els.status) return; 
+  els.status.innerHTML = spin ? `<span class=\"spinner\"></span> ${text}` : text; 
+}
+function renderPoolInfo(){ 
+  const surahCount = new Set(pool.map(k=>+k.split(':')[0])).size; 
+  els.poolInfo.textContent = `Pool: ${pool.length} versets · ${surahCount} sourate(s)`; 
+}
 function currentMode(){ return els.modeSurah.checked ? 'surah' : 'juz'; }
-function showModeFields(){ if(currentMode()==='surah'){ els.fieldSurah.classList.remove('hidden'); els.fieldJuz.classList.add('hidden'); } else { els.fieldJuz.classList.remove('hidden'); els.fieldSurah.classList.add('hidden'); } }
-function collapseSelection(){ els.controls.classList.add('hidden'); els.card.classList.remove('hidden'); els.btnBack.classList.remove('hidden'); els.main.classList.remove('selection'); els.main.classList.add('collapsed'); }
-function expandSelection(){ els.controls.classList.remove('hidden'); els.card.classList.add('hidden'); els.btnBack.classList.add('hidden'); els.main.classList.add('selection'); els.main.classList.remove('collapsed'); window.scrollTo({top:0,behavior:'smooth'}); }
+function showModeFields(){ 
+  if(currentMode()==='surah'){ 
+    els.fieldSurah.classList.remove('hidden'); els.fieldJuz.classList.add('hidden'); 
+  } else { 
+    els.fieldJuz.classList.remove('hidden'); els.fieldSurah.classList.add('hidden'); 
+  } 
+}
+function collapseSelection(){ 
+  els.controls.classList.add('hidden'); els.card.classList.remove('hidden'); 
+  els.btnBack.classList.remove('hidden'); 
+  els.main.classList.remove('selection'); els.main.classList.add('collapsed'); 
+}
+function expandSelection(){ 
+  els.controls.classList.remove('hidden'); els.card.classList.add('hidden'); 
+  els.btnBack.classList.add('hidden'); 
+  els.main.classList.add('selection'); els.main.classList.remove('collapsed'); 
+  window.scrollTo({top:0,behavior:'smooth'}); 
+}
 
 async function init(){
   els.brand?.addEventListener('click', ()=>{ expandSelection(); });
@@ -218,6 +391,7 @@ async function init(){
   }
   els.juzChecks.appendChild(jfrag);
 
+  setStatus('Chargement des sourates…', true);
   await buildSurahChecks();
   showModeFields();
 
@@ -240,11 +414,13 @@ async function init(){
   els.btnDiag.addEventListener('click', diagnose);
   els.btnBack.addEventListener('click', ()=>{ expandSelection(); });
 
+  // NOUVEAU: Fonction de pré-chargement
+  els.btnPreload.addEventListener('click', preloadAllAyahs);
+
   els.card.addEventListener('click', async (evt)=>{ if(Date.now()<suppressCardClickUntil) return; if(!currentKey) return; if(evt.target.closest('button, audio')) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } });
   window.addEventListener('keydown', async (e)=>{
     if(e.code==='Space' || e.key===' '){ e.preventDefault(); const au=els.audio; if(au && au.src){ if(au.paused){ try{ await au.play(); }catch(_){ } } else { au.pause(); } } return; }
     if(e.key==='ArrowRight'){ e.preventDefault(); if(!currentKey) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } }
-    // ArrowLeft désactivé avec la suppression du bouton Précédent
     if(e.key==='Enter'){ e.preventDefault(); els.btnReroll.click(); }
   });
 
@@ -267,14 +443,11 @@ async function buildPool(){
     for(const s of ss){ 
       const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
       const count=meta?.count||200; 
-      
-      // --- MODIFICATION ---
-      // Ne pas inclure le dernier verset, sauf si la sourate n'a qu'un verset
+      // N'inclut pas le dernier verset si la sourate a plus d'un verset (pour exclure le verset de fin de sourate non-standard)
       const limit = (count > 1) ? count - 1 : 1;
-      for(let a=1;a<=limit;a++){ // Utilise 'limit' au lieu de 'count'
+      for(let a=1;a<=limit;a++){ 
         acc.push(ayahKey(s,a)); 
       } 
-      // --- FIN MODIFICATION ---
     } 
     pool = acc;
   }
@@ -325,15 +498,127 @@ async function displayChunk(s,start,count,showMeta){
   }
 }
 
-async function chunkNext(){ if(!revealMeta) return; const s=chunkBaseSurah; const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const last=meta?.count||200; const nextStart=(chunkStartAyah||1)+CHUNK_SIZE; if(nextStart>last){ setStatus('Fin de la sourate.'); return; } chunkStartAyah=nextStart; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
+async function chunkNext(){ 
+  if(!revealMeta) return; 
+  const s=chunkBaseSurah; 
+  const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
+  const last=meta?.count||200; 
+  const nextStart=(chunkStartAyah||1)+CHUNK_SIZE; 
+  if(nextStart>last){ 
+    setStatus('Fin de la sourate.'); 
+    // Au lieu de s'arrêter, on peut passer au verset aléatoire suivant après la fin de la sourate.
+    const key = shuffler.next(SMART);
+    suppressCardClickUntil = Date.now() + 400;
+    await showSingleFromKey(key, false);
+    return; 
+  } 
+  chunkStartAyah=nextStart; 
+  await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); 
+}
 
-async function diagnose(){ const tests=[ ['Sutanlab surahList',API.sutanlab.surahList], ['AlQuran surahList',API.alquran.surahList] ]; let ok=0,msgs=[]; for(const [name,url] of tests){ try{ const j=await fetchJSONWithFallback(url); if(j){ ok++; msgs.push(`${name}: OK`);} else { msgs.push(`${name}: vide`); } }catch(e){ msgs.push(`${name}: KO`); } } if(els.status) els.status.textContent=`Diagnostic — ${ok}/${tests.length} OK. ${msgs.join(' · ')}`; }
+/**
+ * Prépare et lance le téléchargement séquentiel de tous les versets.
+ */
+async function preloadAllAyahs(){
+  if(isPreloading) return; 
+  isPreloading = true;
+  els.btnPreload.disabled = true;
+  setStatus('Vérification de la liste des sourates...', true);
+
+  await loadSurahList(); // Assure que la liste des sourates est chargée
+  const surahs = Cache.surahIndex;
+  
+  if(!surahs || surahs.length < 114) {
+      isPreloading = false;
+      els.btnPreload.disabled = false;
+      setStatus('Erreur: Impossible de charger la liste complète des 114 sourates.');
+      return;
+  }
+  
+  // Récitateur et traduction
+  const reciterEd = els.reciter.value;
+  const translationEd = els.translation.value;
+  
+  let totalVerses = surahs.reduce((sum, s) => sum + s.count, 0);
+  let versesCached = 0;
+  
+  setStatus(`Début du téléchargement (0/${totalVerses} versets)...`, true);
+
+  // Utilisation d'une API plus stable pour le pré-chargement
+  const apiUrls = {
+      arabicAudioTr: (s, a, trEd, reciterEd) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${trEd},${reciterEd}`,
+      arabicAudio: (s, a, reciterEd) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${reciterEd}`,
+  };
+
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  for (const surah of surahs) {
+    const s = surah.n;
+    // La limite est le nombre total de versets.
+    const limit = surah.count; 
+
+    for (let a = 1; a <= limit; a++) {
+      let url = '';
+      
+      // Construire l'URL de l'API Alquran.cloud pour mettre en cache les 3 ressources en 1 requête
+      // (Arabe + Audio + Traduction). Si trEd est 'none', on simplifie l'URL.
+      if (translationEd !== 'none') {
+        url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${translationEd},${reciterEd}`;
+      } else {
+        url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${reciterEd}`;
+      }
+      
+      try {
+        // Le Service Worker va intercepter cette requête et la mettre en cache.
+        // Utilisation de fetch simple sans fallback proxy pour le pré-chargement de masse
+        const response = await fetch(url, { cache: 'force-cache' }); 
+        
+        if (response.ok) {
+          versesCached++;
+        } else {
+          // Si une requête échoue, on continue
+          console.warn(`Échec de la mise en cache de ${s}:${a}. Status: ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`Erreur de fetch pour ${s}:${a}:`, error);
+      }
+
+      // Affichage de la progression
+      if(versesCached % 10 === 0 || versesCached === totalVerses){
+          setStatus(`Téléchargement: ${versesCached}/${totalVerses} versets (${(versesCached/totalVerses*100).toFixed(1)}%)…`, true);
+      }
+      
+      // Délai pour ne pas surcharger le serveur de l'API
+      await delay(50); 
+    }
+  }
+
+  isPreloading = false;
+  els.btnPreload.disabled = false;
+  setStatus(`Terminé! ${versesCached} versets du Coran complet (avec audio/traduction) sont disponibles hors-ligne.`, false);
+}
+
+async function diagnose(){ 
+  const tests=[ 
+    ['Sutanlab surahList',API.sutanlab.surahList], 
+    ['AlQuran surahList',API.alquran.surahList] 
+  ]; 
+  let ok=0,msgs=[]; 
+  for(const [name,url] of tests){ 
+    try{ 
+      const j=await fetchJSONWithFallback(url); 
+      if(j){ ok++; msgs.push(`${name}: OK`);} 
+      else { msgs.push(`${name}: vide`); } 
+    }catch(e){ msgs.push(`${name}: KO`); } 
+  } 
+  if(els.status) els.status.textContent=`Diagnostic — ${ok}/${tests.length} OK. ${msgs.join(' · ')}`; 
+}
 
 // --- AJOUT PWA ---
 // Enregistrement du Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js') // Doit correspondre au nom du fichier SW
+    navigator.serviceWorker.register('./sw.js') 
       .then(reg => console.log('Service Worker enregistré.', reg))
       .catch(err => console.log('Échec de l\'enregistrement du Service Worker:', err));
   });
