@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Murajaah — Révision du Coran</title>
-
+  
   <!-- Ajouts PWA -->
   <meta name="theme-color" content="#0c0f14" />
   <link rel="manifest" href="manifest.json" />
@@ -263,19 +263,19 @@ async function buildPool(){
   } else {
     const ss = selectedFromChecks('surahChecks').map(Number).filter(Boolean);
     if(!ss.length){ setStatus('Coche au moins une sourate.'); pool=[]; renderPoolInfo(); return; }
-    let acc=[];
-    for(const s of ss){
-      const meta=(Cache.surahIndex||[]).find(x=>+x.n===s);
-      const count=meta?.count||200;
-
+    let acc=[]; 
+    for(const s of ss){ 
+      const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
+      const count=meta?.count||200; 
+      
       // --- MODIFICATION ---
       // Ne pas inclure le dernier verset, sauf si la sourate n'a qu'un verset
       const limit = (count > 1) ? count - 1 : 1;
       for(let a=1;a<=limit;a++){ // Utilise 'limit' au lieu de 'count'
-        acc.push(ayahKey(s,a));
-      }
+        acc.push(ayahKey(s,a)); 
+      } 
       // --- FIN MODIFICATION ---
-    }
+    } 
     pool = acc;
   }
   shuffler.set(pool); shuffler.setHistorySize(DEFAULT_RECENCY);
@@ -283,8 +283,6 @@ async function buildPool(){
   renderPoolInfo();
   setStatus(`${currentMode()==='juz'?'Juz':'Sourate(s)'} prêtes.`);
 }
-
-function clearChunk(){ els.chunk.innerHTML=''; }
 
 async function showSingleFromKey(key, collapse=false){
   currentKey = key; currentIndex = pool.indexOf(key);
@@ -294,7 +292,7 @@ async function showSingleFromKey(key, collapse=false){
   await displaySingle(s,a,false);
 }
 
-async function revealAndShowChunk(){ if(!currentKey) return; const [s,a]=currentKey.split(':').map(Number); revealMeta=true; chunkBaseSurah=s; chunkStartAyah=a+1; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
+async function revealAndShowChunk(){ if(!currentKey) return; const [s,a]=currentKey.split(':'.map(Number); revealMeta=true; chunkBaseSurah=s; chunkStartAyah=a+1; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
 async function refreshDisplay(){ const [s,a]=currentKey.split(':').map(Number); if(revealMeta){ await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); } else { await displaySingle(s,a,false); } }
 
 async function displaySingle(s,a,showMeta){
