@@ -190,9 +190,7 @@ const API={
   alquran:{ 
     surahList:'https://api.alquran.cloud/v1/surah', 
     juz:(n)=>`https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`, 
-    ayahAr:(s,a)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani`, 
     ayahTr:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`, 
-    ayahAudio:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}` 
   }, 
   githubRaw:{ 
     surah:(s)=>`https://raw.githubusercontent.com/semarketir/quranjson/master/source/surah/surah_${s}.json` 
@@ -232,7 +230,8 @@ async function buildSurahChecks(){
     value: String(s.number), 
     label: `${pretty(s.number)} · ${s.nameEn||''} — ${s.nameAr||''}`.trim(), 
     n: s.number, 
-    count: s.numberOfAyahsActual||s.numberOfAyahs||200 // Utilise la meilleure estimation du nombre de versets
+    // Utilise la meilleure estimation du nombre de versets. Nous ajoutons 1 pour la Basmala si elle n'est pas déjà comptée
+    count: s.numberOfAyahsActual||s.numberOfAyahs||200 
   })); 
   const box = byId('surahChecks'); 
   box.innerHTML=''; 
@@ -278,50 +277,66 @@ async function loadJuz(j){
       return list; 
     } 
   }catch(_){ } 
-  const a=await fetchJSONWithFallback(API.alquran.juz(j)); 
-  const list=(a.data.ayahs||[]).map(v=>({ s:v.surah.number, a:v.numberInSurah })); 
-  Cache.juzMap.set(key,list); 
-  return list; 
+  // Fallback Alquran.cloud pour Juz
+  try{
+    const a=await fetchJSONWithFallback(API.alquran.juz(j)); 
+    const list=(a.data.ayahs||[]).map(v=>({ s:v.surah.number, a:v.numberInSurah })); 
+    Cache.juzMap.set(key,list); 
+    return list; 
+  }catch(_){ }
+  return [];
 }
 
 /**
  * Récupère le texte, la traduction et l'audio d'un verset.
- * Utilise Sutanlab pour le texte/audio s'il est disponible, Alquran.cloud pour la traduction.
  * @param {number} s Numéro de sourate
  * @param {number} a Numéro de verset
  * @param {string} trEd Édition de traduction
  * @param {string} reciterEd Édition du récitateur
  */
 async function getAyah(s,a,trEd,reciterEd){ 
-  const k=ayahKey(s,a); 
-  // La mise en cache interne dans Cache.ayahText n'est plus nécessaire car le SW gère le cache HTTP
-  
   let arabic="", tr="", audio=""; 
   
-  // 1. Récupération du Texte Arabe + Audio (via Alquran.cloud, plus fiable pour l'audio)
-  try{ 
-    const audioEdition = reciterEd;
-    const arabicEdition = 'quran-uthmani'; // Texte Othmani
-    
-    // Requête pour Arabe et Audio
-    const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${arabicEdition},${audioEdition}`);
-    if(r && r.data){
-      // Utilisation du premier élément (Arabe)
-      arabic = r.data.ayahs[0].text || ""; 
-      // L'URL audio est dans le deuxième élément (Audio)
-      audio = r.data.ayahs[1]?.audio || ""; 
-    }
-  }catch(_){}
+  // Utilisation de l'API Alquran.cloud pour récupérer Arabe, Audio et Traduction en 1 ou 2 requêtes
+  const audioEdition = reciterEd;
+  const arabicEdition = 'quran-uthmani'; // Texte Othmani
+  const editions = [arabicEdition, audioEdition];
+  if (trEd && trEd !== 'none') {
+      editions.push(trEd);
+  }
   
-  // 2. Récupération de la Traduction
-  if(trEd && trEd!=='none'){ 
-    try{ 
-      const t=await fetchJSONWithFallback(API.alquran.ayahTr(s,a,trEd)); 
-      tr=t?.data?.text||""; 
-    }catch(_){} 
-  } 
+  try{ 
+    const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`);
+    if(r && r.data){
+      // Les données sont dans un tableau ordonné par les éditions demandées
+      const parts = r.data.ayahs;
 
-  // Fallback si Alquran.cloud échoue complètement pour l'Arabe (très rare)
+      const arabicPart = parts.find(p => p.edition?.identifier === arabicEdition);
+      const audioPart = parts.find(p => p.edition?.identifier === audioEdition);
+      const trPart = parts.find(p => p.edition?.identifier === trEd);
+
+      arabic = arabicPart?.text || ""; 
+      audio = audioPart?.audio || ""; 
+      tr = trPart?.text || "";
+    }
+  }catch(_){
+      // Fallback si la requête multiple échoue
+      try {
+          const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${arabicEdition},${reciterEd}`);
+          if(r && r.data){
+              arabic = r.data.ayahs[0]?.text || ""; 
+              audio = r.data.ayahs[1]?.audio || ""; 
+          }
+          if (trEd && trEd !== 'none') {
+              const t = await fetchJSONWithFallback(API.alquran.ayahTr(s,a,trEd)); 
+              tr = t?.data?.text||""; 
+          }
+      } catch(__) {
+          console.error(`Double erreur de chargement pour ${s}:${a}`, __);
+      }
+  }
+  
+  // Fallback si tout échoue complètement pour l'Arabe 
   if(!arabic){ 
     try{ 
       const j2=await fetchJSONWithFallback(API.sutanlab.surahAyah(s,a)); 
@@ -330,7 +345,6 @@ async function getAyah(s,a,trEd,reciterEd){
   }
 
   const out={arabic:arabic||'(texte indisponible)',tr,audio,trEdition:trEd,reciter:reciterEd}; 
-  // Pas de Cache.ayahText.set(), le SW s'en charge.
   return out; 
 }
 
@@ -341,7 +355,7 @@ const els={
   juzChecks: byId('juzChecks'), surahChecks: byId('surahChecks'), surahSearch: byId('surahSearch'), 
   translation: byId('translation'), reciter: byId('reciter'), 
   btnRand: byId('btn-random'), btnReroll: byId('btn-reroll'), btnNext: byId('btn-next'), 
-  btnDiag: byId('btn-diagnose'), btnPreload: byId('btn-preload'), // Nouveau bouton
+  btnDiag: byId('btn-diagnose'), btnPreload: byId('btn-preload'), 
   status: byId('status'), meta: byId('meta'), ar: byId('ar'), tr: byId('tr'), chunk: byId('chunk'), 
   audio: byId('audio'), poolInfo: byId('poolInfo'), card: byId('card'), 
   juzAll: byId('juz-all'), surahAll: byId('surah-all') 
@@ -349,7 +363,7 @@ const els={
 let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1; 
 let revealMeta=false; 
 let chunkBaseSurah=null, chunkStartAyah=null;
-let isPreloading = false; // État pour éviter les clics multiples
+let isPreloading = false; 
 
 function setStatus(text,spin=false){ 
   if(!els.status) return; 
@@ -443,9 +457,13 @@ async function buildPool(){
     for(const s of ss){ 
       const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
       const count=meta?.count||200; 
-      // N'inclut pas le dernier verset si la sourate a plus d'un verset (pour exclure le verset de fin de sourate non-standard)
-      const limit = (count > 1) ? count - 1 : 1;
-      for(let a=1;a<=limit;a++){ 
+      
+      // La sourate 1 (Al-Fatiha) a 7 versets. L'API les numérote de 1 à 7.
+      // Les sourates 2-114 incluent la Basmala comme verset 1.
+      // L'API Alquran.cloud que nous utilisons pour le pré-chargement gère les numéros de verset standard.
+      // Nous allons simplement itérer jusqu'à `count`.
+      
+      for(let a=1;a<=count;a++){ 
         acc.push(ayahKey(s,a)); 
       } 
     } 
@@ -465,8 +483,17 @@ async function showSingleFromKey(key, collapse=false){
   await displaySingle(s,a,false);
 }
 
-async function revealAndShowChunk(){ if(!currentKey) return; const [s,a]=currentKey.split(':'.map(Number); revealMeta=true; chunkBaseSurah=s; chunkStartAyah=a+1; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
-async function refreshDisplay(){ const [s,a]=currentKey.split(':').map(Number); if(revealMeta){ await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); } else { await displaySingle(s,a,false); } }
+async function revealAndShowChunk(){ if(!currentKey) return; const [s,a]=currentKey.split(':').map(Number); revealMeta=true; chunkBaseSurah = s; chunkStartAyah = a+1; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
+async function refreshDisplay(){ 
+  if(!currentKey) return;
+  const [s,a]=currentKey.split(':').map(Number); 
+  if(revealMeta){ 
+    await displayChunk(chunkBaseSurah, chunkStartAyah, CHUNK_SIZE, true); 
+  } else { 
+    await displaySingle(s,a,false); 
+  } 
+}
+function clearChunk(){ els.chunk.innerHTML=''; }
 
 async function displaySingle(s,a,showMeta){
   clearChunk(); els.meta.classList.toggle('hidden', !showMeta);
@@ -482,8 +509,15 @@ async function displayChunk(s,start,count,showMeta){
   const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const title = meta ? `${pretty(s)} · ${meta.label}` : `Sourate ${s}`;
   els.meta.textContent = `${title}`;
   els.ar.textContent=''; els.tr.textContent=''; clearChunk();
-  const end = Math.min((meta?.count||start+count-1), start+count-1);
-  if(start> (meta?.count||0)){ els.chunk.innerHTML='<div class="muted">Fin de la sourate.</div>'; return; }
+  
+  const last = meta?.count || 200; // Utilise le nombre de versets réel
+  const end = Math.min(last, start + count - 1);
+  
+  if(start > last){ 
+    els.chunk.innerHTML='<div class="muted">Fin de la sourate.</div>'; 
+    return; 
+  }
+  
   for(let a=start; a<=end; a++){
     try{
       const data=await getAyah(s,a,els.translation.value,els.reciter.value);
@@ -493,7 +527,15 @@ async function displayChunk(s,start,count,showMeta){
       const tr=document.createElement('div'); tr.className='trans'; tr.textContent=data.tr||'';
       div.appendChild(num); div.appendChild(ar); if(tr.textContent) div.appendChild(tr);
       els.chunk.appendChild(div);
-      if(a===start){ if(data.audio){ els.audio.src=data.audio; els.audio.classList.remove('hidden'); } else { els.audio.src=''; els.audio.classList.add('hidden'); } }
+      if(a===start){ 
+        if(data.audio){ 
+          els.audio.src=data.audio; 
+          els.audio.classList.remove('hidden'); 
+        } else { 
+          els.audio.src=''; 
+          els.audio.classList.add('hidden'); 
+        } 
+      }
     }catch(_){ setStatus('Erreur de chargement sur un verset.'); }
   }
 }
@@ -504,12 +546,14 @@ async function chunkNext(){
   const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
   const last=meta?.count||200; 
   const nextStart=(chunkStartAyah||1)+CHUNK_SIZE; 
-  if(nextStart>last){ 
-    setStatus('Fin de la sourate.'); 
-    // Au lieu de s'arrêter, on peut passer au verset aléatoire suivant après la fin de la sourate.
+  
+  if(nextStart > last){ 
+    setStatus('Fin de la sourate. Tirage d\'un nouveau verset aléatoire...', true); 
+    // Passe au verset aléatoire suivant après la fin de la sourate.
     const key = shuffler.next(SMART);
     suppressCardClickUntil = Date.now() + 400;
     await showSingleFromKey(key, false);
+    setStatus('Nouveau verset tiré.');
     return; 
   } 
   chunkStartAyah=nextStart; 
@@ -520,22 +564,22 @@ async function chunkNext(){
  * Prépare et lance le téléchargement séquentiel de tous les versets.
  */
 async function preloadAllAyahs(){
+  console.log('preloadAllAyahs: Démarrage de la fonction de pré-chargement.');
   if(isPreloading) return; 
   isPreloading = true;
   els.btnPreload.disabled = true;
   setStatus('Vérification de la liste des sourates...', true);
 
-  await loadSurahList(); // Assure que la liste des sourates est chargée
+  await loadSurahList(); 
   const surahs = Cache.surahIndex;
   
   if(!surahs || surahs.length < 114) {
       isPreloading = false;
       els.btnPreload.disabled = false;
-      setStatus('Erreur: Impossible de charger la liste complète des 114 sourates.');
+      setStatus('Erreur: Impossible de charger la liste complète des 114 sourates. Réessayez.');
       return;
   }
   
-  // Récitateur et traduction
   const reciterEd = els.reciter.value;
   const translationEd = els.translation.value;
   
@@ -544,47 +588,36 @@ async function preloadAllAyahs(){
   
   setStatus(`Début du téléchargement (0/${totalVerses} versets)...`, true);
 
-  // Utilisation d'une API plus stable pour le pré-chargement
-  const apiUrls = {
-      arabicAudioTr: (s, a, trEd, reciterEd) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${trEd},${reciterEd}`,
-      arabicAudio: (s, a, reciterEd) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${reciterEd}`,
-  };
-
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   for (const surah of surahs) {
     const s = surah.n;
-    // La limite est le nombre total de versets.
     const limit = surah.count; 
 
     for (let a = 1; a <= limit; a++) {
-      let url = '';
-      
-      // Construire l'URL de l'API Alquran.cloud pour mettre en cache les 3 ressources en 1 requête
-      // (Arabe + Audio + Traduction). Si trEd est 'none', on simplifie l'URL.
+      let editions = ['quran-uthmani', reciterEd];
       if (translationEd !== 'none') {
-        url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${translationEd},${reciterEd}`;
-      } else {
-        url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani,${reciterEd}`;
+        editions.push(translationEd);
       }
+      
+      // Construction de l'URL pour mettre en cache les 3 ressources en 1 requête
+      const url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`;
       
       try {
         // Le Service Worker va intercepter cette requête et la mettre en cache.
-        // Utilisation de fetch simple sans fallback proxy pour le pré-chargement de masse
         const response = await fetch(url, { cache: 'force-cache' }); 
         
         if (response.ok) {
           versesCached++;
         } else {
-          // Si une requête échoue, on continue
-          console.warn(`Échec de la mise en cache de ${s}:${a}. Status: ${response.status}`);
+          console.warn(`[Preload] Échec de la mise en cache de ${s}:${a}. Status: ${response.status}`);
         }
       } catch (error) {
-        console.error(`Erreur de fetch pour ${s}:${a}:`, error);
+        console.error(`[Preload] Erreur de fetch pour ${s}:${a}:`, error);
       }
 
       // Affichage de la progression
-      if(versesCached % 10 === 0 || versesCached === totalVerses){
+      if(versesCached % 50 === 0 || versesCached === totalVerses){
           setStatus(`Téléchargement: ${versesCached}/${totalVerses} versets (${(versesCached/totalVerses*100).toFixed(1)}%)…`, true);
       }
       
