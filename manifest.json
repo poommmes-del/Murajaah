@@ -1,0 +1,21 @@
+{
+  "name": "Murajaah - Révision du Coran",
+  "short_name": "Murajaah",
+  "description": "Application de révision de versets du Coran.",
+  "start_url": "murajaah_v2_offline.html",
+  "display": "standalone",
+  "background_color": "#0c0f14",
+  "theme_color": "#0c0f14",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/5b8cff/FFFFFF?text=M",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://placehold.co/512x512/5b8cff/FFFFFF?text=Murajaah",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

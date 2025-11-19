@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Murajaah — Révision du Coran</title>
+
+  <!-- Ajouts PWA -->
+  <meta name="theme-color" content="#0c0f14" />
+  <link rel="manifest" href="manifest.json" />
+  <!-- Fin des ajouts PWA -->
+
+  <style>
+    :root{--bg:#0c0f14;--fg:#e6e9ef;--muted:#a6adbb;--pri:#5b8cff;--pri-2:#9d7cff;--acc:#1dd1a1;--danger:#ff6b6b;--glass:rgba(255,255,255,0.06)}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #1a2340 0%, transparent 60%),radial-gradient(1000px 700px at 120% 10%, #2a144a 0%, transparent 60%),linear-gradient(#0b0f16,#0b0f16);color:var(--fg);font:16px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    header{padding:16px 16px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:12px;cursor:pointer}
+    .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri-2));display:grid;place-items:center;box-shadow:0 6px 30px rgba(91,140,255,.35), inset 0 0 12px rgba(255,255,255,.2)}
+    .logo svg{width:28px;height:28px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+    h1{margin:0;font-size:20px;font-weight:800;letter-spacing:.2px}
+
+    main#main{max-width:1180px;margin:0 auto;padding:8px 16px 40px}
+    .panel{background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px}
+
+    .grid{display:grid;gap:12px}
+    .grid.selection{grid-template-columns:1fr}
+    .grid.collapsed{grid-template-columns:1fr}
+
+    .controls{display:grid;gap:10px}
+    .field{display:grid;gap:6px}
+    label{font-size:13px;color:var(--muted)}
+    select,button,input[type="text"],input[type="checkbox"]{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));color:var(--fg);outline:none}
+    button{cursor:pointer;transition:transform .05s ease, box-shadow .2s ease}
+    button.primary{background:linear-gradient(135deg,var(--pri),var(--pri-2));border:none;box-shadow:0 10px 26px rgba(91,140,255,.25);color:#fff}
+    button.primary:active{transform:translateY(1px)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+
+    .ayah{min-height:430px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:20px;cursor:pointer;max-width:1100px;margin:0 auto}
+    .meta{display:flex;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:13px}
+    .arabic{font-family:"Amiri","Scheherazade New","Noto Naskh Arabic",serif;font-size:32px;line-height:1.9;direction:rtl}
+    .trans{font-size:16px;color:#d7deee}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .pill{padding:6px 10px;border-radius:50px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:12px;color:#c7cee0}
+    .muted{color:var(--muted)} .hidden{display:none}
+    .footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
+    .mode{display:flex;gap:14px;align-items:center}
+    .mode input{accent-color:var(--pri)}
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .checkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:260px;overflow:auto;padding:6px;border-radius:10px;border:1px dashed rgba(255,255,255,0.12)}
+    .chk{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:8px;border-radius:10px}
+    .chk input{width:18px;height:18px;accent-color:var(--acc)}
+
+    .topbar{display:flex;gap:8px;align-items:center;padding:8px 0}
+    .ghost{background:transparent;border:1px dashed rgba(255,255,255,0.25);color:var(--fg)}
+
+    .chunk{display:grid;gap:14px}
+    .chunk-item{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)}
+    .chunk-item .num{font-size:12px;color:var(--muted)}
+
+    /* Kill any stray control after Pool (but allow primary too) */
+    .actions > :not(.row):not(audio):not(.pill):not(.primary){display:none !important}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand" id="brand-home" title="Accueil">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#fff" stop-opacity=".95"/>
+              <stop offset="100%" stop-color="#ffe08a" stop-opacity=".95"/>
+            </linearGradient>
+          </defs>
+          <path d="M50 10c-9 2-16 8-20 16-2 4-3 8-3 12 0 3 1 6 3 8 2 2 5 3 8 2 4-1 7-4 8-8 1-3 0-6-2-8-3-2-7-1-10 1 4-9 10-15 18-19l-2-4Z" fill="url(#g)"/>
+          <circle cx="22" cy="18" r="3" fill="#fff" opacity=".9"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Murajaah</h1>
+      </div>
+    </div>
+    <div class="topbar">
+      <button id="btn-back" class="pill ghost hidden" title="Revenir à la sélection">⟵ Revenir à la sélection</button>
+      <div class="pill">v2.0-offline</div>
+    </div>
+  </header>
+
+  <main id="main" class="grid selection">
+    <section class="panel controls" id="controls" aria-label="Sélection">
+      <div class="field">
+        <label>Mode de sélection</label>
+        <div class="mode">
+          <label><input type="radio" name="mode" id="mode-juz" value="juz"> Par Juz</label>
+          <label><input type="radio" name="mode" id="mode-surah" value="surah" checked> Par Sourate</label>
+        </div>
+      </div>
+
+      <div class="field" id="field-juz">
+        <label>Juz (cases à cocher)</label>
+        <div class="row">
+          <button id="juz-all" type="button">Tout</button>
+        </div>
+        <div id="juzChecks" class="checkgrid"></div>
+      </div>
+
+      <div class="field" id="field-surah">
+        <label>Sourates (cases à cocher)</label>
+        <div class="row">
+          <input id="surahSearch" type="text" placeholder="Rechercher (ex: Baqarah, الفاتحة, 1)…" style="flex:1"/>
+          <button id="surah-all" type="button">Tout</button>
+        </div>
+        <div id="surahChecks" class="checkgrid"></div>
+      </div>
+
+      <div class="field">
+        <label for="reciter">Récitateur</label>
+        <select id="reciter">
+          <option value="ar.alafasy" selected>Mishary Alafasy</option>
+          <option value="ar.husary">Mahmoud Al‑Husary</option>
+          <option value="ar.shaatree">Abu Bakr Ash‑Shaatree</option>
+          <option value="ar.hudhaify">Ali Al‑Hudhaify</option>
+          <option value="ar.minshawi">Muhammad Al‑Minshawi</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="translation">Traduction</label>
+        <select id="translation">
+          <option value="none">Aucune (arabe seul)</option>
+          <option value="fr.hamidullah" selected>Français — Hamidullah</option>
+          <option value="en.asad">English — Asad</option>
+          <option value="en.pickthall">English — Pickthall</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <button class="primary" id="btn-random">Tirer un verset</button>
+        <button id="btn-diagnose">Diagnostiquer API</button>
+        <div class="muted" id="status">Prêt.</div>
+      </div>
+    </section>
+
+    <section class="panel ayah hidden" id="card" aria-live="polite">
+      <div class="meta" id="meta">—</div>
+      <div class="arabic" id="ar">—</div>
+      <div class="trans" id="tr" dir="auto"></div>
+      <div class="chunk" id="chunk"></div>
+      <div class="actions">
+        <div class="row">
+          <button id="btn-reroll" class="primary">Tirer un verset</button>
+          <!-- Précédent supprimé -->
+          <button id="btn-next" class="ghost">Suivant ▶︎</button>
+        </div>
+        <audio id="audio" controls class="hidden"></audio>
+        <span class="pill" id="poolInfo">Pool : 0 versets</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">Raccourcis: Espace = Audio · →/clic = Suivant </div>
+
+<script>
+const byId=(id)=>document.getElementById(id);
+const pretty=(n)=>n.toString().padStart(3,'0');
+const uniq=(arr)=>[...new Set(arr)];
+
+const FLASHCARD=true;
+const SMART=true;
+const CHUNK_SIZE=4;
+const DEFAULT_RECENCY=30;
+let suppressCardClickUntil=0;
+
+const PROXIES=[(url)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,(url)=>`https://cors.isomorphic-git.org/${url}`,(url)=>`https://thingproxy.freeboard.io/fetch/${url}`];
+async function fetchJSONWithFallback(url, opts={}){ try{ const r=await fetch(url,opts); if(r.ok) return r.json(); throw new Error(`HTTP ${r.status}`);}catch(e){ for(const wrap of PROXIES){ try{ const r=await fetch(wrap(url),opts); if(r.ok) return r.json(); }catch(_){} } throw e; } }
+
+const API={ sutanlab:{ surahList:'https://api.quran.sutanlab.id/surah', juz:(n)=>`https://api.quran.sutanlab.id/juz/${n}`, surahAyah:(s,a)=>`https://api.quran.sutanlab.id/surah/${s}/${a}` }, alquran:{ surahList:'https://api.alquran.cloud/v1/surah', juz:(n)=>`https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`, ayahAr:(s,a)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani`, ayahTr:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`, ayahAudio:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}` }, githubRaw:{ surah:(s)=>`https://raw.githubusercontent.com/semarketir/quranjson/master/source/surah/surah_${s}.json` } };
+
+const Cache={ surahs:null, juzMap:new Map(), ayahText:new Map(), surahIndex:[] };
+
+class SmartShuffle{ constructor(items=[],historySize=DEFAULT_RECENCY){ this.hist=[]; this.ptr=-1; this.historySize=historySize; this.all=[]; this.bag=[]; this.set(items); } set(items){ this.all=uniq(items); this._refill(); } setHistorySize(n){ this.historySize=Math.max(0,n|0); } _fy(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } } _refill(){ this.bag=this.all.slice(); this._fy(this.bag); const last=(this.hist && this.hist.length)? this.hist[this.hist.length-1] : undefined; if(this.bag.length>1 && last!==undefined && this.bag[0]===last){ const j=Math.floor(Math.random()*(this.bag.length-1))+1; [this.bag[0],this.bag[j]]=[this.bag[j],this.bag[0]]; } } next(smart=true){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.hist=this.hist.slice(0,this.ptr+1);} if(!this.bag.length) this._refill(); let idx=0; if(smart && this.historySize>0){ const recent=new Set(this.hist.slice(-this.historySize)); idx=this.bag.findIndex(x=>!recent.has(x)); if(idx===-1) idx=0; } else { idx=Math.floor(Math.random()*this.bag.length);} const picked=this.bag.splice(idx,1)[0]; this.hist.push(picked); this.ptr=this.hist.length-1; return picked; } prev(){ if(this.ptr>0){ this.ptr--; return this.hist[this.ptr]; } return null; } forward(){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.ptr++; return this.hist[this.ptr]; } return null; } }
+
+function ayahKey(s,a){ return `${s}:${a}` }
+
+async function loadSurahList(){ if(Cache.surahs) return Cache.surahs; try{ const j=await fetchJSONWithFallback(API.sutanlab.surahList); if(j && j.data){ Cache.surahs=j.data.map(x=>({number:x.number, nameAr:x.name.short||x.name, nameEn:x.name.transliteration?.en||x.englishName, numberOfAyahs:x.numberOfVerses||x.numberOfAyahs})); return Cache.surahs; } }catch(_){ } try{ const a=await fetchJSONWithFallback(API.alquran.surahList); Cache.surahs=a.data.map(x=>({number:x.number, nameAr:x.name, nameEn:x.englishName, numberOfAyahs:x.numberOfAyahs})); return Cache.surahs; }catch(_){ } Cache.surahs=[...Array(114)].map((_,i)=>({number:i+1,nameAr:`سورة ${i+1}`,nameEn:`Surah ${i+1}`,numberOfAyahs:200})); return Cache.surahs; }
+
+async function buildSurahChecks(){ const list = await loadSurahList(); Cache.surahIndex = list.map(s=>({ value: String(s.number), label: `${pretty(s.number)} · ${s.nameEn||''} — ${s.nameAr||''}`.trim(), n: s.number, count: s.numberOfAyahs||200 })); const box = byId('surahChecks'); box.innerHTML=''; const frag=document.createDocumentFragment(); for(const it of Cache.surahIndex){ const lab=document.createElement('label'); lab.className='chk'; lab.dataset.label=it.label.toLowerCase(); const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.value; cb.name='surah'; const span=document.createElement('span'); span.textContent=it.label; lab.appendChild(cb); lab.appendChild(span); frag.appendChild(lab); } box.appendChild(frag); const first=box.querySelector('input[type="checkbox"]'); if(first){ first.checked=true; } }
+
+function filterSurahChecks(query){ const q=(query||'').toLowerCase().trim(); const items = byId('surahChecks').querySelectorAll('.chk'); items.forEach(l=>{ const match = !q || (l.dataset.label||'').includes(q); l.style.display = match? 'flex':'none'; }); }
+function setAllChecks(containerId, checked){ const box = byId(containerId); box.querySelectorAll('input[type="checkbox"]').forEach(cb=>{ cb.checked=!!checked; }); box.dispatchEvent(new Event('change')); }
+function selectedFromChecks(containerId){ return Array.from(byId(containerId).querySelectorAll('input[type="checkbox"]:checked')).map(cb=>cb.value); }
+
+async function loadJuz(j){ const key = String(j); if(Cache.juzMap.has(key)) return Cache.juzMap.get(key); try{ const d=await fetchJSONWithFallback(API.sutanlab.juz(j)); if(d && d.data){ const verses=d.data.verses||d.data.ayahs||[]; const list=verses.map(v=>({ s:v.surah?.number||v.number?.surah||v.surahNumber||v.surah?.number||v.surah?.id, a:v.number?.inSurah||v.numberInSurah||v.verseNumber })).filter(x=>+x.s&&+x.a); Cache.juzMap.set(key,list); return list; } }catch(_){ } const a=await fetchJSONWithFallback(API.alquran.juz(j)); const list=(a.data.ayahs||[]).map(v=>({ s:v.surah.number, a:v.numberInSurah })); Cache.juzMap.set(key,list); return list; }
+
+async function getAyah(s,a,trEd,reciterEd){ const k=ayahKey(s,a); const c=Cache.ayahText.get(`${k}:${trEd}:${reciterEd}`); if(c) return c; let arabic="", tr="", audio=""; try{ const j=await fetchJSONWithFallback(API.alquran.ayahAr(s,a)); arabic=j?.data?.text||""; }catch(_){} if(!arabic){ try{ const j2=await fetchJSONWithFallback(API.sutanlab.surahAyah(s,a)); arabic=j2?.data?.text?.arab||j2?.data?.text||""; }catch(_){} } if(!arabic){ try{ const g=await fetchJSONWithFallback(API.githubRaw.surah(s)); arabic=g?.verses?.[a-1]?.text||g?.data?.[a-1]?.text||""; }catch(_){} } if(trEd && trEd!=='none'){ try{ const t=await fetchJSONWithFallback(API.alquran.ayahTr(s,a,trEd)); tr=t?.data?.text||""; }catch(_){} } try{ const au=await fetchJSONWithFallback(API.alquran.ayahAudio(s,a,reciterEd||'ar.alafasy')); audio=au?.data?.audio||""; }catch(_){} const out={arabic:arabic||'(texte indisponible)',tr,audio,trEdition:trEd,reciter:reciterEd}; Cache.ayahText.set(`${k}:${trEd}:${reciterEd}`,out); return out; }
+
+const els={ main:byId('main'), controls: byId('controls'), btnBack: byId('btn-back'), brand: document.getElementById('brand-home'), modeJuz: byId('mode-juz'), modeSurah: byId('mode-surah'), fieldJuz: byId('field-juz'), fieldSurah: byId('field-surah'), juzChecks: byId('juzChecks'), surahChecks: byId('surahChecks'), surahSearch: byId('surahSearch'), translation: byId('translation'), reciter: byId('reciter'), btnRand: byId('btn-random'), btnReroll: byId('btn-reroll'), btnNext: byId('btn-next'), btnDiag: byId('btn-diagnose'), status: byId('status'), meta: byId('meta'), ar: byId('ar'), tr: byId('tr'), chunk: byId('chunk'), audio: byId('audio'), poolInfo: byId('poolInfo'), card: byId('card'), juzAll: byId('juz-all'), surahAll: byId('surah-all') };
+let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1; let revealMeta=false; let chunkBaseSurah=null, chunkStartAyah=null;
+
+function setStatus(text,spin=false){ if(!els.status) return; els.status.innerHTML = spin ? `<span class=\"spinner\"></span> ${text}` : text; }
+function renderPoolInfo(){ const surahCount = new Set(pool.map(k=>+k.split(':')[0])).size; els.poolInfo.textContent = `Pool: ${pool.length} versets · ${surahCount} sourate(s)`; }
+function currentMode(){ return els.modeSurah.checked ? 'surah' : 'juz'; }
+function showModeFields(){ if(currentMode()==='surah'){ els.fieldSurah.classList.remove('hidden'); els.fieldJuz.classList.add('hidden'); } else { els.fieldJuz.classList.remove('hidden'); els.fieldSurah.classList.add('hidden'); } }
+function collapseSelection(){ els.controls.classList.add('hidden'); els.card.classList.remove('hidden'); els.btnBack.classList.remove('hidden'); els.main.classList.remove('selection'); els.main.classList.add('collapsed'); }
+function expandSelection(){ els.controls.classList.remove('hidden'); els.card.classList.add('hidden'); els.btnBack.classList.add('hidden'); els.main.classList.add('selection'); els.main.classList.remove('collapsed'); window.scrollTo({top:0,behavior:'smooth'}); }
+
+async function init(){
+  els.brand?.addEventListener('click', ()=>{ expandSelection(); });
+
+  const jfrag=document.createDocumentFragment();
+  for(let j=1;j<=30;j++){
+    const lab=document.createElement('label'); lab.className='chk';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=String(j); cb.name='juz';
+    const span=document.createElement('span'); span.textContent=`Juz ${j}`;
+    lab.appendChild(cb); lab.appendChild(span); jfrag.appendChild(lab);
+  }
+  els.juzChecks.appendChild(jfrag);
+
+  await buildSurahChecks();
+  showModeFields();
+
+  els.modeJuz.addEventListener('change', ()=>{ showModeFields(); pool=[]; currentKey=null; currentIndex=-1; renderPoolInfo(); setStatus('Mode Juz — coche 1+ Juz, puis tire un verset.'); expandSelection(); });
+  els.modeSurah.addEventListener('change', ()=>{ showModeFields(); pool=[]; currentKey=null; currentIndex=-1; renderPoolInfo(); setStatus('Mode Sourate — coche 1+ sourates, puis tire un verset.'); expandSelection(); });
+  els.juzChecks.addEventListener('change', async ()=>{ if(currentMode()==='juz'){ await buildPool(); }});
+  els.surahChecks.addEventListener('change', async ()=>{ if(currentMode()==='surah'){ await buildPool(); }});
+  els.translation.addEventListener('change', async ()=>{ if(currentKey){ await refreshDisplay(); }});
+  els.reciter.addEventListener('change', async ()=>{ if(currentKey){ await refreshDisplay(); }});
+  els.surahSearch.addEventListener('input', (e)=>filterSurahChecks(e.target.value));
+  els.juzAll?.addEventListener('click', ()=>setAllChecks('juzChecks',true));
+  els.surahAll?.addEventListener('click', ()=>setAllChecks('surahChecks',true));
+
+  // Boutons Tirer
+  els.btnRand.addEventListener('click', async (e)=>{ e.preventDefault(); await ensurePool(); if(!pool.length){ setStatus('Pool vide: coche au moins un Juz ou une Sourate.'); return; } const key=shuffler.next(SMART); suppressCardClickUntil=Date.now()+500; await showSingleFromKey(key, true); });
+  els.btnReroll.addEventListener('click', async ()=>{ await ensurePool(); if(!pool.length){ setStatus('Pool vide: coche au moins un Juz ou une Sourate.'); expandSelection(); return; } const key=shuffler.next(SMART); suppressCardClickUntil=Date.now()+400; await showSingleFromKey(key, false); });
+
+  // Navigation
+  els.btnNext.addEventListener('click', async (e)=>{ e.stopPropagation(); if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } });
+  els.btnDiag.addEventListener('click', diagnose);
+  els.btnBack.addEventListener('click', ()=>{ expandSelection(); });
+
+  els.card.addEventListener('click', async (evt)=>{ if(Date.now()<suppressCardClickUntil) return; if(!currentKey) return; if(evt.target.closest('button, audio')) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } });
+  window.addEventListener('keydown', async (e)=>{
+    if(e.code==='Space' || e.key===' '){ e.preventDefault(); const au=els.audio; if(au && au.src){ if(au.paused){ try{ await au.play(); }catch(_){ } } else { au.pause(); } } return; }
+    if(e.key==='ArrowRight'){ e.preventDefault(); if(!currentKey) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } }
+    // ArrowLeft désactivé avec la suppression du bouton Précédent
+    if(e.key==='Enter'){ e.preventDefault(); els.btnReroll.click(); }
+  });
+
+  await buildPool(); setStatus('Prêt.');
+}
+
+async function ensurePool(){ if(!pool.length) await buildPool(); }
+
+async function buildPool(){
+  if(currentMode()==='juz'){
+    const js = selectedFromChecks('juzChecks').map(Number).filter(Boolean);
+    if(!js.length){ setStatus('Coche au moins un Juz.'); pool=[]; renderPoolInfo(); return; }
+    setStatus('Chargement des Juz…', true);
+    let acc=[]; for(const j of js){ try{ const list=await loadJuz(j); acc=acc.concat(list.map(x=>ayahKey(x.s,x.a))); }catch(e){ setStatus('APIs Juz indisponibles pour certains éléments.'); } }
+    pool = uniq(acc);
+  } else {
+    const ss = selectedFromChecks('surahChecks').map(Number).filter(Boolean);
+    if(!ss.length){ setStatus('Coche au moins une sourate.'); pool=[]; renderPoolInfo(); return; }
+    let acc=[];
+    for(const s of ss){
+      const meta=(Cache.surahIndex||[]).find(x=>+x.n===s);
+      const count=meta?.count||200;
+
+      // --- MODIFICATION ---
+      // Ne pas inclure le dernier verset, sauf si la sourate n'a qu'un verset
+      const limit = (count > 1) ? count - 1 : 1;
+      for(let a=1;a<=limit;a++){ // Utilise 'limit' au lieu de 'count'
+        acc.push(ayahKey(s,a));
+      }
+      // --- FIN MODIFICATION ---
+    }
+    pool = acc;
+  }
+  shuffler.set(pool); shuffler.setHistorySize(DEFAULT_RECENCY);
+  currentKey=null; currentIndex=-1; revealMeta=false; chunkBaseSurah=null; chunkStartAyah=null; clearChunk();
+  renderPoolInfo();
+  setStatus(`${currentMode()==='juz'?'Juz':'Sourate(s)'} prêtes.`);
+}
+
+function clearChunk(){ els.chunk.innerHTML=''; }
+
+async function showSingleFromKey(key, collapse=false){
+  currentKey = key; currentIndex = pool.indexOf(key);
+  const [s,a] = key.split(':').map(Number);
+  revealMeta = false; chunkBaseSurah = s; chunkStartAyah = a+1;
+  if(collapse) collapseSelection();
+  await displaySingle(s,a,false);
+}
+
+async function revealAndShowChunk(){ if(!currentKey) return; const [s,a]=currentKey.split(':').map(Number); revealMeta=true; chunkBaseSurah=s; chunkStartAyah=a+1; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
+async function refreshDisplay(){ const [s,a]=currentKey.split(':').map(Number); if(revealMeta){ await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); } else { await displaySingle(s,a,false); } }
+
+async function displaySingle(s,a,showMeta){
+  clearChunk(); els.meta.classList.toggle('hidden', !showMeta);
+  const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const title = meta ? `${pretty(s)} · ${meta.label}` : `Sourate ${s}`;
+  els.meta.textContent = `${title} — Verset ${a}`;
+  els.ar.textContent='Chargement…'; els.tr.textContent=''; els.audio.classList.add('hidden'); els.audio.src='';
+  try{ const data=await getAyah(s,a,els.translation.value,els.reciter.value); els.ar.textContent=data.arabic||'(indisponible)'; els.tr.textContent=data.tr||''; if(data.audio){ els.audio.src=data.audio; els.audio.classList.remove('hidden'); } }
+  catch(e){ els.ar.textContent='(erreur de chargement)'; setStatus('Impossible de charger ce verset.'); }
+}
+
+async function displayChunk(s,start,count,showMeta){
+  els.meta.classList.toggle('hidden', !showMeta);
+  const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const title = meta ? `${pretty(s)} · ${meta.label}` : `Sourate ${s}`;
+  els.meta.textContent = `${title}`;
+  els.ar.textContent=''; els.tr.textContent=''; clearChunk();
+  const end = Math.min((meta?.count||start+count-1), start+count-1);
+  if(start> (meta?.count||0)){ els.chunk.innerHTML='<div class="muted">Fin de la sourate.</div>'; return; }
+  for(let a=start; a<=end; a++){
+    try{
+      const data=await getAyah(s,a,els.translation.value,els.reciter.value);
+      const div=document.createElement('div'); div.className='chunk-item';
+      const num=document.createElement('div'); num.className='num'; num.textContent=`${title} — ${a}`;
+      const ar=document.createElement('div'); ar.className='arabic'; ar.textContent=data.arabic||'(indisponible)';
+      const tr=document.createElement('div'); tr.className='trans'; tr.textContent=data.tr||'';
+      div.appendChild(num); div.appendChild(ar); if(tr.textContent) div.appendChild(tr);
+      els.chunk.appendChild(div);
+      if(a===start){ if(data.audio){ els.audio.src=data.audio; els.audio.classList.remove('hidden'); } else { els.audio.src=''; els.audio.classList.add('hidden'); } }
+    }catch(_){ setStatus('Erreur de chargement sur un verset.'); }
+  }
+}
+
+async function chunkNext(){ if(!revealMeta) return; const s=chunkBaseSurah; const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const last=meta?.count||200; const nextStart=(chunkStartAyah||1)+CHUNK_SIZE; if(nextStart>last){ setStatus('Fin de la sourate.'); return; } chunkStartAyah=nextStart; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
+
+async function diagnose(){ const tests=[ ['Sutanlab surahList',API.sutanlab.surahList], ['AlQuran surahList',API.alquran.surahList] ]; let ok=0,msgs=[]; for(const [name,url] of tests){ try{ const j=await fetchJSONWithFallback(url); if(j){ ok++; msgs.push(`${name}: OK`);} else { msgs.push(`${name}: vide`); } }catch(e){ msgs.push(`${name}: KO`); } } if(els.status) els.status.textContent=`Diagnostic — ${ok}/${tests.length} OK. ${msgs.join(' · ')}`; }
+
+// --- AJOUT PWA ---
+// Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js') // Doit correspondre au nom du fichier SW
+      .then(reg => console.log('Service Worker enregistré.', reg))
+      .catch(err => console.log('Échec de l\'enregistrement du Service Worker:', err));
+  });
+}
+// --- FIN AJOUT PWA ---
+
+init();
+</script>
+</body>
+</html>
