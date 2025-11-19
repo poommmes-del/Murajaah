@@ -30,7 +30,7 @@
     .controls{display:grid;gap:10px}
     .field{display:grid;gap:6px}
     label{font-size:13px;color:var(--muted)}
-    select,button,input[type="text"],input[type="checkbox"]{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));color:var(--fg);outline:none}
+    select,button,input[type="text"],input[type="checkbox"],input[type="number"]{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));color:var(--fg);outline:none}
     button{cursor:pointer;transition:transform .05s ease, box-shadow .2s ease}
     button.primary{background:linear-gradient(135deg,var(--pri),var(--pri-2));border:none;box-shadow:0 10px 26px rgba(91,140,255,.25);color:#fff}
     button.primary:active{transform:translateY(1px)}
@@ -41,7 +41,7 @@
     .arabic{font-family:"Amiri","Scheherazade New","Noto Naskh Arabic",serif;font-size:32px;line-height:1.9;direction:rtl}
     .trans{font-size:16px;color:#d7deee}
     .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .pill{padding:6px 10px;border-radius:50px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:12px;color:#c7cee0}
+    .pill{padding:6px 10px;border-radius:50px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:12px;color:#c7cee0; display: flex; align-items: center; gap: 4px; /* Ajout pour l'icône */}
     .muted{color:var(--muted)} .hidden{display:none}
     .footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
     .mode{display:flex;gap:14px;align-items:center}
@@ -62,6 +62,64 @@
 
     /* Kill any stray control after Pool (but allow primary too) */
     .actions > :not(.row):not(audio):not(.pill):not(.primary){display:none !important}
+
+    /* Styles pour la modale */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 1000; transition: opacity 0.3s ease;
+    }
+    .modal-content {
+      background: var(--bg); padding: 20px; border-radius: 16px;
+      width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-header h2 {
+      margin: 0; font-size: 1.4em;
+    }
+    .close-btn {
+      background: none; border: none; color: var(--muted); font-size: 1.5em;
+      cursor: pointer; transition: color 0.1s;
+    }
+    .close-btn:hover { color: var(--fg); }
+    .modal-controls {
+        display: grid; gap: 10px;
+        margin-top: 15px;
+    }
+    .modal-controls .row {
+        align-items: center;
+    }
+    .preload-progress {
+        background-color: var(--glass);
+        height: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+    .preload-bar {
+        height: 100%;
+        width: 0%;
+        background-color: var(--acc);
+        transition: width 0.1s linear;
+    }
+    .info-cache {
+        font-size: 13px;
+        color: var(--muted);
+        padding: 8px 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        margin-top: 15px;
+    }
+    .info-cache .danger {
+        color: var(--danger);
+        font-weight: bold;
+    }
+    
   </style>
 </head>
 <body>
@@ -85,7 +143,17 @@
     </div>
     <div class="topbar">
       <button id="btn-back" class="pill ghost hidden" title="Revenir à la sélection">⟵ Revenir à la sélection</button>
-      <div class="pill">v2.1-offline</div>
+      
+      <!-- NOUVEAU BOUTON DE GESTION DU CACHE (TOUJOURS VISIBLE) -->
+      <button id="btn-cache-manager" class="pill" title="Gérer le mode hors-ligne" aria-label="Gérer le mode hors-ligne">
+        <!-- Icône d'engrenage (Settings) en SVG -->
+        <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <path fill-rule="evenodd" d="M11.493 2.94a.75.75 0 010 1.115l-1.464 2.196a.5.5 0 00-.07.243v3.702a1 1 0 01-1 1h-.5a1 1 0 01-1-1V6.5a.5.5 0 00-.07-.243L5.507 4.055a.75.75 0 010-1.115 6 6 0 115.986 0zM10 18a8 8 0 100-16 8 8 0 000 16z" clip-rule="evenodd"></path>
+        </svg>
+        Cache
+      </button>
+      
+      <div class="pill">v2.0-offline</div>
     </div>
   </header>
 
@@ -137,8 +205,8 @@
       </div>
 
       <div class="row">
-        <button class="primary" id="btn-random">Tirer un verset</button>
-        <button id="btn-preload" class="ghost" style="flex:1">Télécharger tout (Offline)</button>
+        <button class="primary" id="btn-random" style="flex: 1;">Tirer un verset</button>
+        <!-- L'ancien bouton de gestion du cache a été retiré d'ici -->
       </div>
       
       <div class="row">
@@ -155,7 +223,6 @@
       <div class="actions">
         <div class="row">
           <button id="btn-reroll" class="primary">Tirer un verset</button>
-          <!-- Précédent supprimé -->
           <button id="btn-next" class="ghost">Suivant ▶︎</button>
         </div>
         <audio id="audio" controls class="hidden"></audio>
@@ -165,6 +232,63 @@
   </main>
 
   <div class="footer">Raccourcis: Espace = Audio · →/clic = Suivant </div>
+
+  <!-- MODALE DE GESTION DU CACHE (cachée par défaut) -->
+  <div id="modal-cache" class="modal-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="modal-title">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h2 id="modal-title">Configuration du Mode Hors-Ligne</h2>
+              <button class="close-btn" id="close-cache-modal">&times;</button>
+          </div>
+
+          <p class="muted">Choisissez le récitateur, la traduction, et les sourates spécifiques que vous souhaitez rendre disponibles hors-ligne. Cela peut prendre beaucoup d'espace.</p>
+          
+          <section class="modal-controls">
+              <!-- Sélection du Récitateur -->
+              <div class="field">
+                <label>Récitateur(s) à mettre en cache (Audio)</label>
+                <div id="cacheReciters" class="checkgrid" style="max-height: 150px;">
+                    <!-- Les options seront générées ici par JS -->
+                </div>
+              </div>
+
+              <!-- Sélection de la Traduction -->
+              <div class="field">
+                <label>Traduction(s) à mettre en cache (Texte)</label>
+                <div id="cacheTranslations" class="checkgrid" style="grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); max-height: 120px;">
+                    <!-- Les options seront générées ici par JS -->
+                </div>
+              </div>
+
+              <!-- Sélection de la Plage de Sourates -->
+              <div class="field">
+                <label>Plage de Sourates</label>
+                <div class="row">
+                    <label style="flex: 1; text-align: right;">De (1 à 114) :
+                        <input type="number" id="cacheSurahStart" value="1" min="1" max="114" style="text-align: center;"/>
+                    </label>
+                    <label style="flex: 1; text-align: right;">À (1 à 114) :
+                        <input type="number" id="cacheSurahEnd" value="114" min="1" max="114" style="text-align: center;"/>
+                    </label>
+                </div>
+              </div>
+              
+              <button id="btn-start-preload" class="primary">Lancer le téléchargement (Toutes les Sourates)</button>
+              
+              <div id="preload-progress-container" class="hidden">
+                  <p id="preload-status-text" class="muted" style="text-align: center;"></p>
+                  <div class="preload-progress">
+                      <div class="preload-bar" id="preload-bar" style="width: 0%;"></div>
+                  </div>
+              </div>
+
+              <div class="info-cache">
+                <p>⚠️ <span class="danger">Attention :</span> Le mode hors-ligne prend de l'espace sur votre téléphone. Pour le libérer, vous devez vider le cache de l'application *Murajaah* dans les paramètres de votre navigateur.</p>
+              </div>
+          </section>
+      </div>
+  </div>
+
 
 <script>
 const byId=(id)=>document.getElementById(id);
@@ -199,6 +323,23 @@ const API={
 
 const Cache={ surahs:null, juzMap:new Map(), ayahText:new Map(), surahIndex:[] };
 
+// Définitions des Récitateurs et Traductions pour la gestion du cache
+const RECITER_OPTIONS = [
+    { value: 'ar.alafasy', label: 'Mishary Alafasy' },
+    { value: 'ar.husary', label: 'Mahmoud Al‑Husary' },
+    { value: 'ar.shaatree', label: 'Abu Bakr Ash‑Shaatree' },
+    { value: 'ar.hudhaify', label: 'Ali Al‑Hudhaify' },
+    { value: 'ar.minshawi', label: 'Muhammad Al‑Minshawi' },
+];
+
+const TRANSLATION_OPTIONS = [
+    { value: 'fr.hamidullah', label: 'Français (Hamidullah)' },
+    { value: 'en.asad', label: 'Anglais (Asad)' },
+    { value: 'en.pickthall', label: 'Anglais (Pickthall)' },
+    // Option 'none' n'est pas nécessaire ici car le texte arabe est toujours inclus
+];
+
+
 // Classe SmartShuffle
 class SmartShuffle{ constructor(items=[],historySize=DEFAULT_RECENCY){ this.hist=[]; this.ptr=-1; this.historySize=historySize; this.all=[]; this.bag=[]; this.set(items); } set(items){ this.all=uniq(items); this._refill(); } setHistorySize(n){ this.historySize=Math.max(0,n|0); } _fy(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } } _refill(){ this.bag=this.all.slice(); this._fy(this.bag); const last=(this.hist && this.hist.length)? this.hist[this.hist.length-1] : undefined; if(this.bag.length>1 && last!==undefined && this.bag[0]===last){ const j=Math.floor(Math.random()*(this.bag.length-1))+1; [this.bag[0],this.bag[j]]=[this.bag[j],this.bag[0]]; } } next(smart=true){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.hist=this.hist.slice(0,this.ptr+1);} if(!this.bag.length) this._refill(); let idx=0; if(smart && this.historySize>0){ const recent=new Set(this.hist.slice(-this.historySize)); idx=this.bag.findIndex(x=>!recent.has(x)); if(idx===-1) idx=0; } else { idx=Math.floor(Math.random()*this.bag.length);} const picked=this.bag.splice(idx,1)[0]; this.hist.push(picked); this.ptr=this.hist.length-1; return picked; } prev(){ if(this.ptr>0){ this.ptr--; return this.hist[this.ptr]; } return null; } forward(){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.ptr++; return this.hist[this.ptr]; } return null; } }
 
@@ -230,7 +371,7 @@ async function buildSurahChecks(){
     value: String(s.number), 
     label: `${pretty(s.number)} · ${s.nameEn||''} — ${s.nameAr||''}`.trim(), 
     n: s.number, 
-    // Utilise la meilleure estimation du nombre de versets. Nous ajoutons 1 pour la Basmala si elle n'est pas déjà comptée
+    // Utilise la meilleure estimation du nombre de versets.
     count: s.numberOfAyahsActual||s.numberOfAyahs||200 
   })); 
   const box = byId('surahChecks'); 
@@ -258,7 +399,7 @@ function filterSurahChecks(query){
 }
 function setAllChecks(containerId, checked){ 
   const box = byId(containerId); 
-  box.querySelectorAll('input[type="checkbox"]').forEach(cb=>{ cb.checked=!!checked; }); 
+  box.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=!!checked); 
   box.dispatchEvent(new Event('change')); 
 }
 function selectedFromChecks(containerId){ 
@@ -306,6 +447,7 @@ async function getAyah(s,a,trEd,reciterEd){
   }
   
   try{ 
+    // Tente de récupérer tout en une seule requête
     const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`);
     if(r && r.data){
       // Les données sont dans un tableau ordonné par les éditions demandées
@@ -355,19 +497,32 @@ const els={
   juzChecks: byId('juzChecks'), surahChecks: byId('surahChecks'), surahSearch: byId('surahSearch'), 
   translation: byId('translation'), reciter: byId('reciter'), 
   btnRand: byId('btn-random'), btnReroll: byId('btn-reroll'), btnNext: byId('btn-next'), 
-  btnDiag: byId('btn-diagnose'), btnPreload: byId('btn-preload'), 
+  btnDiag: byId('btn-diagnose'), 
+  btnCacheManager: byId('btn-cache-manager'), 
   status: byId('status'), meta: byId('meta'), ar: byId('ar'), tr: byId('tr'), chunk: byId('chunk'), 
   audio: byId('audio'), poolInfo: byId('poolInfo'), card: byId('card'), 
-  juzAll: byId('juz-all'), surahAll: byId('surah-all') 
+  juzAll: byId('juz-all'), surahAll: byId('surah-all'),
+  // Éléments de la Modale
+  modalCache: byId('modal-cache'), closeCacheModal: byId('close-cache-modal'),
+  cacheReciters: byId('cacheReciters'), cacheTranslations: byId('cacheTranslations'),
+  cacheSurahStart: byId('cacheSurahStart'), cacheSurahEnd: byId('cacheSurahEnd'),
+  btnStartPreload: byId('btn-start-preload'),
+  preloadProgressContainer: byId('preload-progress-container'),
+  preloadStatusText: byId('preload-status-text'),
+  preloadBar: byId('preload-bar')
 };
-let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1; 
+let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1, isPreloading = false;
 let revealMeta=false; 
 let chunkBaseSurah=null, chunkStartAyah=null;
-let isPreloading = false; 
 
 function setStatus(text,spin=false){ 
   if(!els.status) return; 
   els.status.innerHTML = spin ? `<span class=\"spinner\"></span> ${text}` : text; 
+}
+function setPreloadStatus(text, progress){
+    els.preloadStatusText.textContent = text;
+    els.preloadBar.style.width = `${progress}%`;
+    els.preloadProgressContainer.classList.remove('hidden');
 }
 function renderPoolInfo(){ 
   const surahCount = new Set(pool.map(k=>+k.split(':')[0])).size; 
@@ -393,6 +548,22 @@ function expandSelection(){
   window.scrollTo({top:0,behavior:'smooth'}); 
 }
 
+function buildCheckboxes(container, options, name, checkedFn){
+    container.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    options.forEach(opt => {
+        const lab=document.createElement('label'); lab.className='chk'; 
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=opt.value; cb.name=name; 
+        if (checkedFn && checkedFn(opt.value)) {
+            cb.checked = true;
+        }
+        const span=document.createElement('span'); span.textContent=opt.label; 
+        lab.appendChild(cb); lab.appendChild(span); frag.appendChild(lab);
+    });
+    container.appendChild(frag);
+}
+
+
 async function init(){
   els.brand?.addEventListener('click', ()=>{ expandSelection(); });
 
@@ -409,6 +580,11 @@ async function init(){
   await buildSurahChecks();
   showModeFields();
 
+  // Initialisation des options de la modale de cache
+  // On présélectionne le récitateur et la traduction par défauts (sinon tout est décoché)
+  buildCheckboxes(els.cacheReciters, RECITER_OPTIONS, 'cache-reciter', (val) => val === els.reciter.value);
+  buildCheckboxes(els.cacheTranslations, TRANSLATION_OPTIONS, 'cache-translation', (val) => val === els.translation.value);
+  
   els.modeJuz.addEventListener('change', ()=>{ showModeFields(); pool=[]; currentKey=null; currentIndex=-1; renderPoolInfo(); setStatus('Mode Juz — coche 1+ Juz, puis tire un verset.'); expandSelection(); });
   els.modeSurah.addEventListener('change', ()=>{ showModeFields(); pool=[]; currentKey=null; currentIndex=-1; renderPoolInfo(); setStatus('Mode Sourate — coche 1+ sourates, puis tire un verset.'); expandSelection(); });
   els.juzChecks.addEventListener('change', async ()=>{ if(currentMode()==='juz'){ await buildPool(); }});
@@ -428,8 +604,27 @@ async function init(){
   els.btnDiag.addEventListener('click', diagnose);
   els.btnBack.addEventListener('click', ()=>{ expandSelection(); });
 
-  // NOUVEAU: Fonction de pré-chargement
-  els.btnPreload.addEventListener('click', preloadAllAyahs);
+  // Gestion de la Modale : Afficher la modale au clic du bouton
+  els.btnCacheManager.addEventListener('click', ()=>{ 
+      console.log('--- Cache Manager Button Clicked ---'); // Log de confirmation
+      // Synchroniser les valeurs de la modale avec les valeurs par défaut actuelles
+      const currentReciter = els.reciter.value;
+      const currentTr = els.translation.value;
+      Array.from(els.cacheReciters.querySelectorAll('input')).forEach(cb => {
+          cb.checked = (cb.value === currentReciter);
+      });
+      Array.from(els.cacheTranslations.querySelectorAll('input')).forEach(cb => {
+          cb.checked = (cb.value === currentTr);
+      });
+      
+      els.modalCache.classList.remove('hidden');
+      els.preloadProgressContainer.classList.add('hidden'); // Cacher la progression au nouvel affichage
+  });
+  // Fermer la modale
+  els.closeCacheModal.addEventListener('click', ()=>{ els.modalCache.classList.add('hidden'); });
+  els.modalCache.addEventListener('click', (e)=>{ if(e.target === els.modalCache) els.modalCache.classList.add('hidden'); });
+  els.btnStartPreload.addEventListener('click', preloadSelectedAyahs);
+
 
   els.card.addEventListener('click', async (evt)=>{ if(Date.now()<suppressCardClickUntil) return; if(!currentKey) return; if(evt.target.closest('button, audio')) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } });
   window.addEventListener('keydown', async (e)=>{
@@ -458,11 +653,7 @@ async function buildPool(){
       const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
       const count=meta?.count||200; 
       
-      // La sourate 1 (Al-Fatiha) a 7 versets. L'API les numérote de 1 à 7.
-      // Les sourates 2-114 incluent la Basmala comme verset 1.
-      // L'API Alquran.cloud que nous utilisons pour le pré-chargement gère les numéros de verset standard.
-      // Nous allons simplement itérer jusqu'à `count`.
-      
+      // La logique d'itération jusqu'à 'count' est conservée.
       for(let a=1;a<=count;a++){ 
         acc.push(ayahKey(s,a)); 
       } 
@@ -561,75 +752,112 @@ async function chunkNext(){
 }
 
 /**
- * Prépare et lance le téléchargement séquentiel de tous les versets.
+ * Prépare et lance le téléchargement séquentiel de tous les versets sélectionnés.
  */
-async function preloadAllAyahs(){
-  console.log('preloadAllAyahs: Démarrage de la fonction de pré-chargement.');
+async function preloadSelectedAyahs(){
+  console.log('preloadSelectedAyahs: Démarrage de la fonction de pré-chargement sélectif.');
   if(isPreloading) return; 
-  isPreloading = true;
-  els.btnPreload.disabled = true;
-  setStatus('Vérification de la liste des sourates...', true);
-
-  await loadSurahList(); 
-  const surahs = Cache.surahIndex;
   
-  if(!surahs || surahs.length < 114) {
-      isPreloading = false;
-      els.btnPreload.disabled = false;
-      setStatus('Erreur: Impossible de charger la liste complète des 114 sourates. Réessayez.');
+  const reciterEditions = selectedFromChecks('cacheReciters');
+  const translationEditions = selectedFromChecks('cacheTranslations').filter(ed => ed !== 'none'); // Exclut 'none'
+  const surahStart = Math.max(1, Math.min(114, Number(els.cacheSurahStart.value) || 1));
+  const surahEnd = Math.max(1, Math.min(114, Number(els.cacheSurahEnd.value) || 114));
+  
+  if (reciterEditions.length === 0 && translationEditions.length === 0) {
+      setPreloadStatus('Erreur : Veuillez sélectionner au moins un récitateur ou une traduction à mettre en cache.', 0);
+      return;
+  }
+  if (surahStart > surahEnd) {
+      setPreloadStatus('Erreur : La sourate de début doit être inférieure ou égale à la sourate de fin.', 0);
       return;
   }
   
-  const reciterEd = els.reciter.value;
-  const translationEd = els.translation.value;
+  isPreloading = true;
+  els.btnStartPreload.disabled = true;
+  setPreloadStatus('Vérification de la liste des sourates...', 0);
+
+  await loadSurahList(); 
+  const surahs = Cache.surahIndex.filter(s => s.n >= surahStart && s.n <= surahEnd);
   
-  let totalVerses = surahs.reduce((sum, s) => sum + s.count, 0);
-  let versesCached = 0;
+  if(!surahs || surahs.length === 0) {
+      isPreloading = false;
+      els.btnStartPreload.disabled = false;
+      setPreloadStatus('Erreur: Aucune sourate trouvée dans la plage sélectionnée.', 0);
+      return;
+  }
   
-  setStatus(`Début du téléchargement (0/${totalVerses} versets)...`, true);
+  // Compte le nombre total d'opérations de mise en cache (nombre de versets * nombre d'éditions distinctes)
+  // L'arabe (quran-uthmani) et l'audio sont mis en cache ensemble pour chaque récitateur.
+  // L'arabe et toutes les traductions sont mis en cache ensemble dans une requête par verset.
+  let totalVersesToCache = 0;
+  
+  // Calcul basé sur les requêtes réelles :
+  // Chaque récitateur sélectionné = 1 requête par verset (Audio + Arabe)
+  totalVersesToCache += surahs.reduce((sum, s) => sum + s.count, 0) * reciterEditions.length;
+  
+  // Si des traductions sont sélectionnées = 1 requête par verset (Arabe + Traductions)
+  if (translationEditions.length > 0) {
+      totalVersesToCache += surahs.reduce((sum, s) => sum + s.count, 0);
+  }
+
+  let versesCached = 0; // Compte le nombre de requêtes de cache réussies
+  
+  setPreloadStatus(`Début du téléchargement (0/${totalVersesToCache} requêtes)...`, 0);
 
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  const arabicEdition = 'quran-uthmani';
 
   for (const surah of surahs) {
     const s = surah.n;
     const limit = surah.count; 
 
     for (let a = 1; a <= limit; a++) {
-      let editions = ['quran-uthmani', reciterEd];
-      if (translationEd !== 'none') {
-        editions.push(translationEd);
+      
+      // 1. Mise en cache de l'Audio et de l'Arabe (pour chaque récitateur sélectionné)
+      for (const reciterEd of reciterEditions) {
+          let editions = [arabicEdition, reciterEd];
+          const url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`;
+          
+          try {
+            // Utilisation de fetch avec 'force-cache' pour s'assurer que le SW intercepte et met en cache.
+            const response = await fetch(url, { cache: 'force-cache' }); 
+            if (response.ok) { versesCached++; } else { console.warn(`[Preload] Échec cache Audio/Arabe ${reciterEd} pour ${s}:${a}. Status: ${response.status}`); }
+          } catch (error) {
+            console.error(`[Preload] Erreur de fetch Audio/Arabe ${reciterEd} pour ${s}:${a}:`, error);
+          }
+          await delay(50); // Petit délai pour l'API
       }
       
-      // Construction de l'URL pour mettre en cache les 3 ressources en 1 requête
-      const url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`;
-      
-      try {
-        // Le Service Worker va intercepter cette requête et la mettre en cache.
-        const response = await fetch(url, { cache: 'force-cache' }); 
-        
-        if (response.ok) {
-          versesCached++;
-        } else {
-          console.warn(`[Preload] Échec de la mise en cache de ${s}:${a}. Status: ${response.status}`);
-        }
-      } catch (error) {
-        console.error(`[Preload] Erreur de fetch pour ${s}:${a}:`, error);
+      // 2. Mise en cache des Traductions (une seule requête pour toutes les traductions sélectionnées + Arabe)
+      if (translationEditions.length > 0) {
+          let editions = [arabicEdition, ...translationEditions];
+          const url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`;
+
+          try {
+            const response = await fetch(url, { cache: 'force-cache' }); 
+            if (response.ok) { versesCached++; } else { console.warn(`[Preload] Échec cache Traductions pour ${s}:${a}. Status: ${response.status}`); }
+          } catch (error) {
+            console.error(`[Preload] Erreur de fetch Traductions pour ${s}:${a}:`, error);
+          }
+          await delay(50); // Petit délai pour l'API
       }
+      
 
       // Affichage de la progression
-      if(versesCached % 50 === 0 || versesCached === totalVerses){
-          setStatus(`Téléchargement: ${versesCached}/${totalVerses} versets (${(versesCached/totalVerses*100).toFixed(1)}%)…`, true);
+      if(totalVersesToCache > 0 && (versesCached % 50 === 0 || versesCached === totalVersesToCache)){
+          const progress = (versesCached / totalVersesToCache) * 100;
+          setPreloadStatus(`Téléchargement: ${versesCached}/${totalVersesToCache} requêtes (${progress.toFixed(1)}%)…`, progress);
       }
-      
-      // Délai pour ne pas surcharger le serveur de l'API
-      await delay(50); 
     }
   }
 
   isPreloading = false;
-  els.btnPreload.disabled = false;
-  setStatus(`Terminé! ${versesCached} versets du Coran complet (avec audio/traduction) sont disponibles hors-ligne.`, false);
+  els.btnStartPreload.disabled = false;
+  // Fermer la modale après le téléchargement
+  els.modalCache.classList.add('hidden'); 
+  setStatus(`Terminé! ${versesCached} requêtes de données sont maintenant disponibles hors-ligne pour la sélection choisie.`, false);
 }
+
 
 async function diagnose(){ 
   const tests=[ 
@@ -639,6 +867,7 @@ async function diagnose(){
   let ok=0,msgs=[]; 
   for(const [name,url] of tests){ 
     try{ 
+      // Utilisation du fallback pour le diagnostic aussi
       const j=await fetchJSONWithFallback(url); 
       if(j){ ok++; msgs.push(`${name}: OK`);} 
       else { msgs.push(`${name}: vide`); } 
