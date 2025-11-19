@@ -1,14 +1,13 @@
 const CACHE_NAME = 'murajaah-cache-v2';
-const DATA_CACHE_NAME = 'murajaah-data-v4'; // CHANGEMENT DE VERSION POUR FORCER LA MISE À JOUR + FIX
+const DATA_CACHE_NAME = 'murajaah-data-v5'; // CHANGEMENT DE VERSION POUR LE PRÉ-CHARGEMENT COMPLET
 
-// Fichier principal de l'application et les données essentielles
+// Fichier principal de l'application et les données essentielles (API des sourates)
 const APP_SHELL_URLS = [
-  'murajaah_v2_offline.html', // La page HTML
-  // Ajout de l'URL pour la liste des sourates afin que l'interface de sélection fonctionne hors-ligne
+  'murajaah_v2_offline.html',
   'https://api.quran.sutanlab.id/surah' 
 ];
 
-// Hôtes des APIs dont les données seront mises en cache
+// Hôtes des APIs dont les données seront mises en cache (texte, audio, traduction)
 const API_HOSTS = [
   'api.quran.sutanlab.id',
   'api.alquran.cloud',
@@ -20,11 +19,8 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Mise en cache de l\'App Shell et des données essentielles');
-      // Tente d'ajouter tous les fichiers de l'APP_SHELL_URLS
       return cache.addAll(APP_SHELL_URLS).catch(error => {
-          // Si un fichier (comme l'API) ne se charge pas, on continue quand même pour ne pas bloquer
-          // l'installation du Service Worker. Les fichiers HTML/JS restent en cache.
-          console.error('[SW] Échec de l\'ajout de certaines URLs (normal pour API):', error);
+          console.warn('[SW] Avertissement: Échec de l\'ajout de certaines URLs durant l\'installation (attendu pour les APIs)', error);
       });
     })
   );
@@ -36,7 +32,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // On supprime les caches qui n'ont pas la nouvelle version v4
+          // On supprime les caches qui n'ont pas la nouvelle version v5
           if (cacheName !== CACHE_NAME && cacheName !== DATA_CACHE_NAME) {
             console.log('[SW] Suppression de l\'ancien cache:', cacheName);
             return caches.delete(cacheName);
@@ -56,9 +52,9 @@ self.addEventListener('fetch', (event) => {
   if (API_HOSTS.some(host => url.hostname.includes(host))) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        // Si la réponse est en cache (même les données API de l'install), on la renvoie immédiatement
+        // Si la réponse est en cache, on la renvoie immédiatement (stratégie Cache-First)
         if (cachedResponse) {
-            console.log('[SW] API Servi depuis le cache de données:', event.request.url);
+            // console.log('[SW] API Servi depuis le cache de données:', event.request.url);
             return cachedResponse;
         }
 
@@ -66,13 +62,15 @@ self.addEventListener('fetch', (event) => {
         return fetch(event.request).then(async (response) => {
             if (response && response.status === 200) {
                 const cache = await caches.open(DATA_CACHE_NAME);
-                cache.put(event.request, response.clone());
+                // Si c'est une requête HEAD (pour vérifier l'existence de l'audio), on ne cache pas
+                if (event.request.method !== 'HEAD') {
+                    cache.put(event.request, response.clone());
+                }
             }
             return response;
         }).catch(async (error) => {
             // Si le réseau échoue et que ce n'était pas en cache, on retourne une erreur.
             console.error('[SW] API Réseau échoué et non trouvé dans le cache:', event.request.url, error);
-            // Retourne une réponse synthétique pour éviter un crash (utile pour les données non trouvées)
             return new Response(JSON.stringify({ error: "Données indisponibles hors-ligne." }), {
                 status: 503,
                 headers: { 'Content-Type': 'application/json' }
@@ -89,13 +87,10 @@ self.addEventListener('fetch', (event) => {
   else {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        // Si trouvé en cache, le retourner
         if (cachedResponse) {
           return cachedResponse;
         }
-        // Sinon, essayer le réseau
         return fetch(event.request).then((response) => {
-          // Mettre en cache les réponses valides
           if (response && response.status === 200 && response.type === 'basic') {
             const responseToCache = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -105,7 +100,6 @@ self.addEventListener('fetch', (event) => {
           return response;
         }).catch(error => {
             console.log('[SW] Fetch App Shell échoué', error);
-            // En cas d'échec, le navigateur affichera sa propre page d'erreur (si non trouvée dans le cache).
         });
       })
     );
