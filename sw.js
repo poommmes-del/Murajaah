@@ -1,115 +1,107 @@
-const CACHE_NAME = 'murajaah-cache-v2';
-const DATA_CACHE_NAME = 'murajaah-data-v6'; // CHANGEMENT DE VERSION POUR FORCER LA MISE À JOUR
+// sw.js
+// Version du cache
+const CACHE_NAME = 'murajaah-cache-v2.0';
 
-// Fichier principal de l'application et les données essentielles (API des sourates)
-const APP_SHELL_URLS = [
-  'murajaah_v2_offline.html',
-  'https://api.quran.sutanlab.id/surah' 
+// Ressources de base à mettre en cache lors de l'installation
+// Le fichier HTML principal sera toujours mis en cache pour l'App Shell.
+const urlsToCache = [
+  './murajaah_v2_offline.html',
+  // Ajoutez d'autres fichiers statiques (manifest.json, images) si vous en avez
+  './manifest.json', // Nécessaire si vous utilisez cette implémentation PWA
 ];
 
-// Hôtes des APIs dont les données seront mises en cache (texte, audio, traduction)
-const API_HOSTS = [
-  'api.quran.sutanlab.id',
-  'api.alquran.cloud',
-  'raw.githubusercontent.com'
+// URLs des APIs à mettre en cache (pour les données dynamiques)
+const API_URLS_TO_CACHE_PATTERN = [
+    'https://api.quran.sutanlab.id/',
+    'https://api.alquran.cloud/v1/',
 ];
 
-// Étape d'installation : mise en cache de l'App Shell + les données essentielles
-self.addEventListener('install', (event) => {
+// Logique d'installation : Mise en cache des ressources de base
+self.addEventListener('install', event => {
+  console.log('[Service Worker] Installation...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Mise en cache de l\'App Shell et des données essentielles');
-      // On ajoute l'URL du fichier HTML lui-même
-      return cache.addAll(APP_SHELL_URLS.concat(['/Murajaah/murajaah_v2_offline.html'])).catch(error => {
-          console.warn('[SW] Avertissement: Échec de l\'ajout de certaines URLs durant l\'installation (attendu pour les APIs)', error);
-      });
-    })
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('[Service Worker] Mise en cache de l\'App Shell');
+        return cache.addAll(urlsToCache).catch(error => {
+            // Certaines ressources comme manifest.json peuvent ne pas exister initialement
+            console.warn('[Service Worker] Cache partiel App Shell réussi, erreurs ignorées:', error);
+        });
+      })
   );
 });
 
-// Étape d'activation : nettoyage des anciens caches
-self.addEventListener('activate', (event) => {
+// Logique d'activation : Nettoyage des anciens caches
+self.addEventListener('activate', event => {
+  console.log('[Service Worker] Activation et nettoyage des anciens caches...');
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          // On supprime les caches qui n'ont pas la nouvelle version v6
-          if (cacheName !== CACHE_NAME && cacheName !== DATA_CACHE_NAME) {
-            console.log('[SW] Suppression de l\'ancien cache:', cacheName);
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('[Service Worker] Suppression de l\'ancien cache :', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
+  // Prend immédiatement le contrôle du client
   return self.clients.claim();
 });
 
-// Étape de Fetch : intercepter les requêtes réseau
-self.addEventListener('fetch', (event) => {
+// Logique de récupération (Fetch) : Stratégie Cache-first pour l'App Shell et Network-first avec Cache Fallback pour l'API.
+self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  const isApiRequest = API_URLS_TO_CACHE_PATTERN.some(pattern => url.href.startsWith(pattern));
+  const isNavigation = event.request.mode === 'navigate';
 
-  // 1. Requête API (Stratégie : Cache d'abord, puis Réseau si échec)
-  if (API_HOSTS.some(host => url.hostname.includes(host))) {
+  if (isNavigation || url.pathname.endsWith('.html')) {
+    // 1. Stratégie Cache-first pour le HTML (App Shell)
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        // Si la réponse est en cache, on la renvoie immédiatement (stratégie Cache-First)
-        if (cachedResponse) {
-            // console.log('[SW] API Servi depuis le cache de données:', event.request.url);
-            return cachedResponse;
-        }
-
-        // Sinon, on essaie le réseau et on met en cache le résultat
-        return fetch(event.request).then(async (response) => {
-            if (response && response.status === 200) {
-                const cache = await caches.open(DATA_CACHE_NAME);
-                // Si c'est une requête HEAD (pour vérifier l'existence de l'audio), on ne cache pas
-                if (event.request.method !== 'HEAD') {
-                    // Vérifie que l'URL n'est pas trop longue pour le cache (limitations Chrome)
-                    if (event.request.url.length < 2000) {
-                       cache.put(event.request, response.clone());
-                    }
-                }
-            }
+      caches.match(event.request)
+        .then(response => {
+          if (response) {
+            // Si l'App Shell est dans le cache, on le retourne immédiatement.
             return response;
-        }).catch(async (error) => {
-            // Si le réseau échoue et que ce n'était pas en cache, on retourne une erreur.
-            console.error('[SW] API Réseau échoué et non trouvé dans le cache:', event.request.url, error);
-            // Retourne une réponse vide ou un message d'erreur JSON pour éviter de bloquer l'App
-            return new Response(JSON.stringify({ error: "Données indisponibles hors-ligne." }), {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        });
-      })
-    );
-  }
-  // 2. Requête vers un Proxy (Stratégie : Réseau seulement, ne jamais mettre en cache)
-  else if (url.hostname.includes('allorigins.win') || url.hostname.includes('isomorphic-git.org') || url.hostname.includes('freeboard.io')) {
-    event.respondWith(fetch(event.request));
-  }
-  // 3. App Shell et autres ressources (Stratégie : Cache d'abord, puis Réseau)
-  else {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(event.request).then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              // Vérifie que l'URL n'est pas trop longue
-              if (event.request.url.length < 2000) {
-                 cache.put(event.request, responseToCache);
-              }
-            });
           }
-          return response;
-        }).catch(error => {
-            console.log('[SW] Fetch App Shell échoué', error);
-        });
-      })
+          // Sinon, on passe au réseau
+          return fetch(event.request);
+        })
     );
+    return;
   }
+  
+  if (isApiRequest) {
+    // 2. Stratégie Network-first avec Cache Fallback pour les requêtes API
+    // Ceci permet d'obtenir les données les plus fraîches, mais utilise le cache en cas d'échec réseau.
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Si la requête réussit, clonez la réponse et mettez-la dans le cache
+          if (!response || response.status !== 200 || response.type !== 'basic' && response.type !== 'cors') {
+            return response;
+          }
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          // En cas d'échec réseau, essayez de retourner une réponse du cache
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // 3. Autres assets (CSS, JS, images, etc.) - Cache-first, Network fallback
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        return response || fetch(event.request);
+      })
+  );
 });
