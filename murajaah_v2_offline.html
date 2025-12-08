@@ -1,894 +1,813 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Murajaah — Révision du Coran</title>
-  
-  <!-- Ajouts PWA -->
-  <meta name="theme-color" content="#0c0f14" />
-  <link rel="manifest" href="manifest.json" />
-  <!-- Fin des ajouts PWA -->
-
-  <style>
-    :root{--bg:#0c0f14;--fg:#e6e9ef;--muted:#a6adbb;--pri:#5b8cff;--pri-2:#9d7cff;--acc:#1dd1a1;--danger:#ff6b6b;--glass:rgba(255,255,255,0.06)}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #1a2340 0%, transparent 60%),radial-gradient(1000px 700px at 120% 10%, #2a144a 0%, transparent 60%),linear-gradient(#0b0f16,#0b0f16);color:var(--fg);font:16px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    header{padding:16px 16px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:12px;cursor:pointer}
-    .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri-2));display:grid;place-items:center;box-shadow:0 6px 30px rgba(91,140,255,.35), inset 0 0 12px rgba(255,255,255,.2)}
-    .logo svg{width:28px;height:28px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
-    h1{margin:0;font-size:20px;font-weight:800;letter-spacing:.2px}
-
-    main#main{max-width:1180px;margin:0 auto;padding:8px 16px 40px}
-    .panel{background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px}
-
-    .grid{display:grid;gap:12px}
-    .grid.selection{grid-template-columns:1fr}
-    .grid.collapsed{grid-template-columns:1fr}
-
-    .controls{display:grid;gap:10px}
-    .field{display:grid;gap:6px}
-    label{font-size:13px;color:var(--muted)}
-    select,button,input[type="text"],input[type="checkbox"],input[type="number"]{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));color:var(--fg);outline:none}
-    button{cursor:pointer;transition:transform .05s ease, box-shadow .2s ease}
-    button.primary{background:linear-gradient(135deg,var(--pri),var(--pri-2));border:none;box-shadow:0 10px 26px rgba(91,140,255,.25);color:#fff}
-    button.primary:active{transform:translateY(1px)}
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-
-    .ayah{min-height:430px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:20px;cursor:pointer;max-width:1100px;margin:0 auto}
-    .meta{display:flex;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:13px}
-    .arabic{font-family:"Amiri","Scheherazade New","Noto Naskh Arabic",serif;font-size:32px;line-height:1.9;direction:rtl}
-    .trans{font-size:16px;color:#d7deee}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .pill{padding:6px 10px;border-radius:50px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:12px;color:#c7cee0; display: flex; align-items: center; gap: 4px; /* Ajout pour l'icône */}
-    .muted{color:var(--muted)} .hidden{display:none}
-    .footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
-    .mode{display:flex;gap:14px;align-items:center}
-    .mode input{accent-color:var(--pri)}
-    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite;vertical-align:middle}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    .checkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:260px;overflow:auto;padding:6px;border-radius:10px;border:1px dashed rgba(255,255,255,0.12)}
-    .chk{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:8px;border-radius:10px}
-    .chk input{width:18px;height:18px;accent-color:var(--acc)}
-
-    .topbar{display:flex;gap:8px;align-items:center;padding:8px 0}
-    .ghost{background:transparent;border:1px dashed rgba(255,255,255,0.25);color:var(--fg)}
-
-    .chunk{display:grid;gap:14px}
-    .chunk-item{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)}
-    .chunk-item .num{font-size:12px;color:var(--muted)}
-
-    /* Kill any stray control after Pool (but allow primary too) */
-    .actions > :not(.row):not(audio):not(.pill):not(.primary){display:none !important}
-
-    /* Styles pour la modale */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
-      display: flex; justify-content: center; align-items: center;
-      z-index: 1000; transition: opacity 0.3s ease;
-    }
-    .modal-content {
-      background: var(--bg); padding: 20px; border-radius: 16px;
-      width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;
-      border: 1px solid rgba(255,255,255,0.15);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
-    .modal-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 16px;
-    }
-    .modal-header h2 {
-      margin: 0; font-size: 1.4em;
-    }
-    .close-btn {
-      background: none; border: none; color: var(--muted); font-size: 1.5em;
-      cursor: pointer; transition: color 0.1s;
-    }
-    .close-btn:hover { color: var(--fg); }
-    .modal-controls {
-        display: grid; gap: 10px;
-        margin-top: 15px;
-    }
-    .modal-controls .row {
-        align-items: center;
-    }
-    .preload-progress {
-        background-color: var(--glass);
-        height: 10px;
-        border-radius: 5px;
-        overflow: hidden;
-        margin-top: 8px;
-    }
-    .preload-bar {
-        height: 100%;
-        width: 0%;
-        background-color: var(--acc);
-        transition: width 0.1s linear;
-    }
-    .info-cache {
-        font-size: 13px;
-        color: var(--muted);
-        padding: 8px 0;
-        border-top: 1px solid rgba(255,255,255,0.08);
-        margin-top: 15px;
-    }
-    .info-cache .danger {
-        color: var(--danger);
-        font-weight: bold;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#064e3b">
     
-  </style>
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    
+    <title>Murajaah — Révision du Noble Coran</title>
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        kufi: ['Reem Kufi', 'sans-serif'],
+                        quran: ['Scheherazade New', 'serif'],
+                    },
+                    colors: {
+                        primary: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        },
+                        night: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+        .arabic-text {
+            line-height: 2.5;
+            direction: rtl;
+            font-feature-settings: "cv01" on;
+        }
+        [v-cloak] { display: none; }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Prevent text selection on mobile */
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
 </head>
-<body>
-  <header>
-    <div class="brand" id="brand-home" title="Accueil">
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#fff" stop-opacity=".95"/>
-              <stop offset="100%" stop-color="#ffe08a" stop-opacity=".95"/>
-            </linearGradient>
-          </defs>
-          <path d="M50 10c-9 2-16 8-20 16-2 4-3 8-3 12 0 3 1 6 3 8 2 2 5 3 8 2 4-1 7-4 8-8 1-3 0-6-2-8-3-2-7-1-10 1 4-9 10-15 18-19l-2-4Z" fill="url(#g)"/>
-          <circle cx="22" cy="18" r="3" fill="#fff" opacity=".9"/>
-        </svg>
-      </div>
-      <div>
-        <h1>Murajaah</h1>
-      </div>
+<body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans selection:bg-primary-500 selection:text-white no-select">
+
+<div id="app" v-cloak class="h-full flex flex-col relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-night-900 via-night-950 to-night-950">
+
+    <!-- Offline Banner -->
+    <div v-if="!isOnline" class="bg-yellow-900/90 text-yellow-100 text-center py-2 text-xs font-medium">
+        <span>Mode Hors Ligne - Données en cache uniquement</span>
     </div>
-    <div class="topbar">
-      <button id="btn-back" class="pill ghost hidden" title="Revenir à la sélection">⟵ Revenir à la sélection</button>
-      
-      <!-- BOUTON DE GESTION DU CACHE -->
-      <button id="btn-cache-manager" class="pill" title="Gérer le mode hors-ligne" aria-label="Gérer le mode hors-ligne">
-        <!-- Icône d'engrenage (Settings) en SVG -->
-        <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-            <path fill-rule="evenodd" d="M11.493 2.94a.75.75 0 010 1.115l-1.464 2.196a.5.5 0 00-.07.243v3.702a1 1 0 01-1 1h-.5a1 1 0 01-1-1V6.5a.5.5 0 00-.07-.243L5.507 4.055a.75.75 0 010-1.115 6 6 0 115.986 0zM10 18a8 8 0 100-16 8 8 0 000 16z" clip-rule="evenodd"></path>
-        </svg>
-        Cache
-      </button>
-      
-      <div class="pill">v2.0-offline</div>
+
+    <!-- Progress Bar for Downloads -->
+    <div v-if="downloadProgress.active" class="fixed top-0 left-0 right-0 z-50 bg-night-900/95 backdrop-blur-md border-b border-white/10">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full border-2 border-primary-500 border-t-transparent animate-spin"></div>
+                <span class="text-sm">{{ downloadProgress.message }}</span>
+            </div>
+            <span class="text-xs text-slate-400">{{ downloadProgress.percent }}%</span>
+        </div>
+        <div class="h-1 bg-white/5">
+            <div class="h-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-300" 
+                 :style="{width: downloadProgress.percent + '%'}"></div>
+        </div>
     </div>
-  </header>
 
-  <main id="main" class="grid selection">
-    <section class="panel controls" id="controls" aria-label="Sélection">
-      <div class="field">
-        <label>Mode de sélection</label>
-        <div class="mode">
-          <label><input type="radio" name="mode" id="mode-juz" value="juz"> Par Juz</label>
-          <label><input type="radio" name="mode" id="mode-surah" value="surah" checked> Par Sourate</label>
+    <header class="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-white/5 bg-night-950/50 backdrop-blur-md z-20">
+        <div class="flex items-center gap-3 cursor-pointer group" @click="returnToHome">
+            <div class="relative w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-900 flex items-center justify-center shadow-lg">
+                <svg class="w-5 sm:w-6 h-5 sm:h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2L14.5 4.5L12 7L9.5 4.5L12 2Z" fill="currentColor" fill-opacity="0.2"/>
+                    <rect x="7" y="7" width="10" height="10" rx="1" stroke-width="1.5"/>
+                    <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-xl sm:text-2xl font-kufi font-bold text-primary-400">Murajaah</h1>
+                <span class="text-[9px] sm:text-[10px] text-white/70 font-medium tracking-widest uppercase">RÉVISION</span>
+            </div>
         </div>
-      </div>
 
-      <div class="field" id="field-juz">
-        <label>Juz (cases à cocher)</label>
-        <div class="row">
-          <button id="juz-all" type="button">Tout</button>
+        <div class="flex items-center gap-2">
+            <!-- Cache Status -->
+            <button @click="showCacheInfo = true" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" :class="cacheStats.totalAyahs > 0 ? 'text-primary-400' : 'text-slate-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+            </button>
         </div>
-        <div id="juzChecks" class="checkgrid"></div>
-      </div>
+    </header>
 
-      <div class="field" id="field-surah">
-        <label>Sourates (cases à cocher)</label>
-        <div class="row">
-          <input id="surahSearch" type="text" placeholder="Rechercher (ex: Baqarah, الفاتحة, 1)…" style="flex:1"/>
-          <button id="surah-all" type="button">Tout</button>
-        </div>
-        <div id="surahChecks" class="checkgrid"></div>
-      </div>
+    <main class="flex-1 relative overflow-hidden flex flex-col items-center justify-center p-4">
 
-      <div class="field">
-        <label for="reciter">Récitateur</label>
-        <select id="reciter">
-          <option value="ar.alafasy" selected>Mishary Alafasy</option>
-          <option value="ar.husary">Mahmoud Al‑Husary</option>
-          <option value="ar.shaatree">Abu Bakr Ash‑Shaatree</option>
-          <option value="ar.hudhaify">Ali Al‑Hudhaify</option>
-          <option value="ar.minshawi">Muhammad Al‑Minshawi</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="translation">Traduction</label>
-        <select id="translation">
-          <option value="none">Aucune (arabe seul)</option>
-          <option value="fr.hamidullah" selected>Français — Hamidullah</option>
-          <option value="en.asad">English — Asad</option>
-          <option value="en.pickthall">English — Pickthall</option>
-        </select>
-      </div>
+        <!-- Configuration View -->
+        <div v-if="view === 'config'" class="w-full max-w-5xl h-full flex flex-col animate-fade-in">
+            <div class="text-center mb-6 sm:mb-10">
+                <h2 class="text-3xl sm:text-4xl font-kufi text-white mb-3">Configuration</h2>
+                <p class="text-slate-400 text-base sm:text-lg">Sélectionnez les parties à réviser</p>
+            </div>
 
-      <div class="row">
-        <button class="primary" id="btn-random" style="flex: 1;">Tirer un verset</button>
-      </div>
-      
-      <div class="row">
-        <button id="btn-diagnose">Diagnostiquer API</button>
-        <div class="muted" id="status">Prêt.</div>
-      </div>
-    </section>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 h-full min-h-0 pb-6">
 
-    <section class="panel ayah hidden" id="card" aria-live="polite">
-      <div class="meta" id="meta">—</div>
-      <div class="arabic" id="ar">—</div>
-      <div class="trans" id="tr" dir="auto"></div>
-      <div class="chunk" id="chunk"></div>
-      <div class="actions">
-        <div class="row">
-          <button id="btn-reroll" class="primary">Tirer un verset</button>
-          <button id="btn-next" class="ghost">Suivant ▶︎</button>
-        </div>
-        <audio id="audio" controls class="hidden"></audio>
-        <span class="pill" id="poolInfo">Pool : 0 versets</span>
-      </div>
-    </section>
-  </main>
+                <!-- Settings Panel -->
+                <div class="lg:col-span-4 flex flex-col gap-4 p-5 rounded-3xl glass-panel">
+                    
+                    <!-- Mode Selection -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Mode</label>
+                        <div class="flex bg-black/40 p-1.5 rounded-xl">
+                            <button @click="mode = 'surah'" 
+                                :class="{'bg-primary-600 text-white': mode === 'surah', 'text-slate-400': mode !== 'surah'}" 
+                                class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all">
+                                Sourate
+                            </button>
+                            <button @click="mode = 'juz'" 
+                                :class="{'bg-primary-600 text-white': mode === 'juz', 'text-slate-400': mode !== 'juz'}" 
+                                class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all">
+                                Juz
+                            </button>
+                        </div>
+                    </div>
 
-  <div class="footer">Raccourcis: Espace = Audio · →/clic = Suivant </div>
+                    <!-- Download Button -->
+                    <div v-if="selectedSurahs.length > 0 || selectedJuz.length > 0" class="p-4 bg-primary-900/20 rounded-xl border border-primary-500/20">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-primary-400 font-medium">Téléchargement pour hors ligne</span>
+                            <svg v-if="hasOfflineData" class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                        </div>
+                        <button @click="downloadSelected" 
+                            :disabled="downloadProgress.active"
+                            class="w-full py-2 bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
+                            {{ hasOfflineData ? 'Mettre à jour' : 'Télécharger' }}
+                        </button>
+                    </div>
 
-  <!-- MODALE DE GESTION DU CACHE (maintenant avec la classe HIDDEN par défaut) -->
-  <div id="modal-cache" class="modal-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="modal-title">
-      <div class="modal-content">
-          <div class="modal-header">
-              <h2 id="modal-title">Configuration du Mode Hors-Ligne</h2>
-              <button class="close-btn" id="close-cache-modal">&times;</button>
-          </div>
+                    <!-- Settings -->
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-2">Récitateur</label>
+                            <select v-model="settings.reciter" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2">
+                                <option value="ar.alafasy">Mishary Alafasy</option>
+                                <option value="ar.hudhaify">Ali Al-Hudhaify</option>
+                                <option value="ar.minshawi">Al-Minshawi</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-2">Traduction</label>
+                            <select v-model="settings.translation" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2">
+                                <option value="none">Arabe seul</option>
+                                <option value="fr.hamidullah">Français</option>
+                                <option value="en.sahih">English</option>
+                            </select>
+                        </div>
+                    </div>
 
-          <p class="muted">Choisissez le récitateur, la traduction, et les sourates spécifiques que vous souhaitez rendre disponibles hors-ligne. Cela peut prendre beaucoup d'espace.</p>
-          
-          <section class="modal-controls">
-              <!-- Sélection du Récitateur -->
-              <div class="field">
-                <label>Récitateur(s) à mettre en cache (Audio)</label>
-                <div id="cacheReciters" class="checkgrid" style="max-height: 150px;">
-                    <!-- Les options seront générées ici par JS -->
+                    <!-- Start Button -->
+                    <div class="mt-auto pt-4 border-t border-white/5">
+                        <div class="flex items-center justify-between mb-3 px-2">
+                            <span class="text-xs text-slate-400">Sélection</span>
+                            <span class="text-xl font-bold text-white">{{ poolSize }} <span class="text-xs text-primary-400">versets</span></span>
+                        </div>
+                        <button @click="startRevision" :disabled="poolSize === 0"
+                            class="w-full py-3.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold rounded-2xl disabled:opacity-50">
+                            Commencer
+                        </button>
+                    </div>
                 </div>
-              </div>
 
-              <!-- Sélection de la Traduction -->
-              <div class="field">
-                <label>Traduction(s) à mettre en cache (Texte)</label>
-                <div id="cacheTranslations" class="checkgrid" style="grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); max-height: 120px;">
-                    <!-- Les options seront générées ici par JS -->
+                <!-- Selection Grid -->
+                <div class="lg:col-span-8 glass-panel rounded-3xl flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-white/5 flex gap-3 items-center">
+                        <input v-if="mode === 'surah'" v-model="searchQuery" type="text" 
+                            placeholder="Rechercher..." 
+                            class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm">
+                        <button @click="toggleAll(true)" class="px-3 py-2 text-xs bg-primary-600/20 text-primary-400 rounded-lg">Tout</button>
+                        <button @click="toggleAll(false)" class="px-3 py-2 text-xs bg-white/5 text-slate-400 rounded-lg">Rien</button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-4">
+                        <!-- Surah Grid -->
+                        <div v-if="mode === 'surah'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <label v-for="s in filteredSurahs" :key="s.number" 
+                                class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all"
+                                :class="selectedSurahs.includes(s.number) ? 'bg-primary-900/30 border-primary-500/30' : 'bg-white/5 border-white/5'">
+                                <input type="checkbox" :value="s.number" v-model="selectedSurahs" class="hidden">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                                    :class="selectedSurahs.includes(s.number) ? 'bg-primary-500 text-white' : 'bg-white/10 text-slate-500'">
+                                    {{ s.number }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-semibold truncate">{{ s.nameEn }}</div>
+                                    <div class="text-xs text-slate-400">{{ s.numberOfAyahs }} versets</div>
+                                </div>
+                                <svg v-if="isSurahCached(s.number)" class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </label>
+                        </div>
+
+                        <!-- Juz Grid -->
+                        <div v-else class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-3">
+                            <label v-for="j in 30" :key="j" class="cursor-pointer">
+                                <input type="checkbox" :value="j" v-model="selectedJuz" class="hidden peer">
+                                <div class="aspect-square rounded-xl border flex flex-col items-center justify-center peer-checked:bg-primary-600 peer-checked:border-primary-500 bg-white/5 border-white/10">
+                                    <span class="text-[10px] opacity-60">JUZ</span>
+                                    <span class="text-2xl font-kufi font-bold">{{ j }}</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-              </div>
+            </div>
+        </div>
 
-              <!-- Sélection de la Plage de Sourates -->
-              <div class="field">
-                <label>Plage de Sourates</label>
-                <div class="row">
-                    <label style="flex: 1; text-align: right;">De (1 à 114) :
-                        <input type="number" id="cacheSurahStart" value="1" min="1" max="114" style="text-align: center;"/>
-                    </label>
-                    <label style="flex: 1; text-align: right;">À (1 à 114) :
-                        <input type="number" id="cacheSurahEnd" value="114" min="1" max="114" style="text-align: center;"/>
-                    </label>
+        <!-- Card View -->
+        <div v-else-if="view === 'card'" class="w-full max-w-4xl flex flex-col items-center h-full">
+            
+            <div class="w-full flex justify-between items-center text-xs text-slate-500 px-4 mb-3">
+                <span v-if="reveal" class="font-kufi text-primary-400">
+                    {{ getSurahName(currentKey) }} - Verset {{ getAyahNumber(currentKey) }}
+                </span>
+                <span class="bg-white/5 px-3 py-1 rounded-full">{{ sessionCount }} révisés</span>
+            </div>
+
+            <div class="relative w-full flex-1 glass-panel rounded-3xl overflow-hidden flex flex-col">
+                
+                <!-- Loading State -->
+                <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-50 bg-night-950/60">
+                    <div class="w-16 h-16 rounded-full border-4 border-white/10 border-t-primary-500 animate-spin"></div>
                 </div>
-              </div>
-              
-              <button id="btn-start-preload" class="primary">Lancer le téléchargement (Toutes les Sourates)</button>
-              
-              <div id="preload-progress-container" class="hidden">
-                  <p id="preload-status-text" class="muted" style="text-align: center;"></p>
-                  <div class="preload-progress">
-                      <div class="preload-bar" id="preload-bar" style="width: 0%;"></div>
-                  </div>
-              </div>
 
-              <div class="info-cache">
-                <p>⚠️ <span class="danger">Attention :</span> Le mode hors-ligne prend de l'espace sur votre téléphone. Pour le libérer, vous devez vider le cache de l'application *Murajaah* dans les paramètres de votre navigateur.</p>
-              </div>
-          </section>
-      </div>
-  </div>
+                <!-- Content -->
+                <div class="flex-1 overflow-y-auto p-6 sm:p-12 flex flex-col items-center">
+                    <div class="w-full max-w-3xl my-auto">
+                        
+                        <!-- Arabic Text -->
+                        <div class="text-center py-8">
+                            <p class="text-3xl sm:text-5xl lg:text-6xl font-quran text-white leading-[2.2]" dir="rtl">
+                                {{ currentData?.arabic }}
+                            </p>
+                        </div>
 
+                        <!-- Audio Player -->
+                        <div v-if="currentAudioUrl && reveal" class="w-full max-w-md mx-auto mt-6 mb-8">
+                            <audio ref="audioPlayer" :src="currentAudioUrl" class="w-full" controls></audio>
+                        </div>
+
+                        <!-- Translation & Next Ayahs -->
+                        <div v-if="reveal" class="animate-fade-in space-y-6">
+                            <div v-if="currentData.tr" class="text-center">
+                                <p class="text-base text-slate-300 italic">{{ currentData.tr }}</p>
+                            </div>
+
+                            <div v-if="chunkData.length" class="space-y-3">
+                                <div class="text-xs text-primary-400 uppercase tracking-widest">Suite</div>
+                                <div v-for="c in chunkData" :key="c.ayah" 
+                                    class="bg-black/20 rounded-xl p-4 border border-white/5">
+                                    <p class="font-quran text-2xl text-white mb-2" dir="rtl">{{ c.arabic }}</p>
+                                    <p v-if="c.tr" class="text-sm text-slate-400">{{ c.tr }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-night-950 to-transparent">
+                    <button v-if="!reveal" @click="revealCard" 
+                        class="w-full py-4 bg-white/10 text-white rounded-2xl">
+                        Révéler
+                    </button>
+                    <button v-else @click="nextCard" 
+                        class="w-full py-4 bg-primary-600 text-white font-bold rounded-2xl">
+                        Suivant →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Cache Info Modal -->
+    <div v-if="showCacheInfo" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click="showCacheInfo = false">
+        <div class="bg-night-900 rounded-2xl p-6 max-w-md w-full border border-white/10" @click.stop>
+            <h3 class="text-lg font-bold mb-4">Stockage Local</h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Versets en cache</span>
+                    <span class="font-mono">{{ cacheStats.totalAyahs }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Sourates complètes</span>
+                    <span class="font-mono">{{ cacheStats.completeSurahs }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Espace utilisé</span>
+                    <span class="font-mono">{{ cacheStats.sizeKB }} KB</span>
+                </div>
+            </div>
+            <button @click="clearCache" class="mt-6 w-full py-2 bg-red-600/20 text-red-400 rounded-lg text-sm">
+                Vider le cache
+            </button>
+        </div>
+    </div>
+
+</div>
 
 <script>
-const byId=(id)=>document.getElementById(id);
-const pretty=(n)=>n.toString().padStart(3,'0');
-const uniq=(arr)=>[...new Set(arr)];
-
-const FLASHCARD=true;
-const SMART=true;
-const CHUNK_SIZE=4;
-const DEFAULT_RECENCY=30;
-let suppressCardClickUntil=0;
-
-// Utilisation de la liste des proxies pour la résilience.
-const PROXIES=[(url)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,(url)=>`https://cors.isomorphic-git.org/${url}`,(url)=>`https://thingproxy.freeboard.io/fetch/${url}`];
-async function fetchJSONWithFallback(url, opts={}){ try{ const r=await fetch(url,opts); if(r.ok) return r.json(); throw new Error(`HTTP ${r.status}`);}catch(e){ for(const wrap of PROXIES){ try{ const r=await fetch(wrap(url),opts); if(r.ok) return r.json(); }catch(_){} } throw e; } }
-
-const API={ 
-  sutanlab:{ 
-    surahList:'https://api.quran.sutanlab.id/surah', 
-    juz:(n)=>`https://api.quran.sutanlab.id/juz/${n}`, 
-    surahAyah:(s,a)=>`https://api.quran.sutanlab.id/surah/${s}/${a}` 
-  }, 
-  alquran:{ 
-    surahList:'https://api.alquran.cloud/v1/surah', 
-    juz:(n)=>`https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`, 
-    ayahTr:(s,a,ed)=>`https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`, 
-  }, 
-  githubRaw:{ 
-    surah:(s)=>`https://raw.githubusercontent.com/semarketir/quranjson/master/source/surah/surah_${s}.json` 
-  } 
-};
-
-const Cache={ surahs:null, juzMap:new Map(), ayahText:new Map(), surahIndex:[] };
-
-// Définitions des Récitateurs et Traductions pour la gestion du cache
-const RECITER_OPTIONS = [
-    { value: 'ar.alafasy', label: 'Mishary Alafasy' },
-    { value: 'ar.husary', label: 'Mahmoud Al‑Husary' },
-    { value: 'ar.shaatree', label: 'Abu Bakr Ash‑Shaatree' },
-    { value: 'ar.hudhaify', label: 'Ali Al‑Hudhaify' },
-    { value: 'ar.minshawi', label: 'Muhammad Al‑Minshawi' },
-];
-
-const TRANSLATION_OPTIONS = [
-    { value: 'fr.hamidullah', label: 'Français (Hamidullah)' },
-    { value: 'en.asad', label: 'Anglais (Asad)' },
-    { value: 'en.pickthall', label: 'Anglais (Pickthall)' },
-    // Option 'none' n'est pas nécessaire ici car le texte arabe est toujours inclus
-];
-
-
-// Classe SmartShuffle
-class SmartShuffle{ constructor(items=[],historySize=DEFAULT_RECENCY){ this.hist=[]; this.ptr=-1; this.historySize=historySize; this.all=[]; this.bag=[]; this.set(items); } set(items){ this.all=uniq(items); this._refill(); } setHistorySize(n){ this.historySize=Math.max(0,n|0); } _fy(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } } _refill(){ this.bag=this.all.slice(); this._fy(this.bag); const last=(this.hist && this.hist.length)? this.hist[this.hist.length-1] : undefined; if(this.bag.length>1 && last!==undefined && this.bag[0]===last){ const j=Math.floor(Math.random()*(this.bag.length-1))+1; [this.bag[0],this.bag[j]]=[this.bag[j],this.bag[0]]; } } next(smart=true){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.hist=this.hist.slice(0,this.ptr+1);} if(!this.bag.length) this._refill(); let idx=0; if(smart && this.historySize>0){ const recent=new Set(this.hist.slice(-this.historySize)); idx=this.bag.findIndex(x=>!recent.has(x)); if(idx===-1) idx=0; } else { idx=Math.floor(Math.random()*this.bag.length);} const picked=this.bag.splice(idx,1)[0]; this.hist.push(picked); this.ptr=this.hist.length-1; return picked; } prev(){ if(this.ptr>0){ this.ptr--; return this.hist[this.ptr]; } return null; } forward(){ if(this.ptr>=0 && this.ptr<this.hist.length-1){ this.ptr++; return this.hist[this.ptr]; } return null; } }
-
-function ayahKey(s,a){ return `${s}:${a}` }
-
-async function loadSurahList(){ 
-  if(Cache.surahs) return Cache.surahs; 
-  try{ 
-    const j=await fetchJSONWithFallback(API.sutanlab.surahList); 
-    if(j && j.data){ 
-      Cache.surahs=j.data.map(x=>({number:x.number, nameAr:x.name.short||x.name, nameEn:x.name.transliteration?.en||x.englishName, numberOfAyahs:x.numberOfVerses||x.numberOfAyahs, numberOfAyahsActual: x.numberOfVerses||x.numberOfAyahs})); 
-      return Cache.surahs; 
-    } 
-  }catch(_){ } 
-  // Fallback API
-  try{ 
-    const a=await fetchJSONWithFallback(API.alquran.surahList); 
-    Cache.surahs=a.data.map(x=>({number:x.number, nameAr:x.name, nameEn:x.englishName, numberOfAyahs:x.numberOfAyahs, numberOfAyahsActual: x.numberOfAyahs})); 
-    return Cache.surahs; 
-  }catch(_){ } 
-  // Fallback si tout échoue (devrait être suffisant pour charger l'App Shell)
-  Cache.surahs=[...Array(114)].map((_,i)=>({number:i+1,nameAr:`سورة ${i+1}`,nameEn:`Surah ${i+1}`,numberOfAyahs:200,numberOfAyahsActual:200})); 
-  return Cache.surahs; 
-}
-
-async function buildSurahChecks(){ 
-  const list = await loadSurahList(); 
-  Cache.surahIndex = list.map(s=>({ 
-    value: String(s.number), 
-    label: `${pretty(s.number)} · ${s.nameEn||''} — ${s.nameAr||''}`.trim(), 
-    n: s.number, 
-    // Utilise la meilleure estimation du nombre de versets.
-    count: s.numberOfAyahsActual||s.numberOfAyahs||200 
-  })); 
-  const box = byId('surahChecks'); 
-  box.innerHTML=''; 
-  const frag=document.createDocumentFragment(); 
-  for(const it of Cache.surahIndex){ 
-    const lab=document.createElement('label'); lab.className='chk'; 
-    lab.dataset.label=it.label.toLowerCase(); 
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.value; cb.name='surah'; 
-    const span=document.createElement('span'); span.textContent=it.label; 
-    lab.appendChild(cb); lab.appendChild(span); frag.appendChild(lab); 
-  } 
-  box.appendChild(frag); 
-  const first=box.querySelector('input[type="checkbox"]'); 
-  if(first){ first.checked=true; } 
-}
-
-function filterSurahChecks(query){ 
-  const q=(query||'').toLowerCase().trim(); 
-  const items = byId('surahChecks').querySelectorAll('.chk'); 
-  items.forEach(l=>{ 
-    const match = !q || (l.dataset.label||'').includes(q); 
-    l.style.display = match? 'flex':'none'; 
-  }); 
-}
-function setAllChecks(containerId, checked){ 
-  const box = byId(containerId); 
-  box.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=!!checked); 
-  box.dispatchEvent(new Event('change')); 
-}
-function selectedFromChecks(containerId){ 
-  return Array.from(byId(containerId).querySelectorAll('input[type="checkbox"]:checked')).map(cb=>cb.value); 
-}
-
-async function loadJuz(j){ 
-  const key = String(j); 
-  if(Cache.juzMap.has(key)) return Cache.juzMap.get(key); 
-  try{ 
-    const d=await fetchJSONWithFallback(API.sutanlab.juz(j)); 
-    if(d && d.data){ 
-      const verses=d.data.verses||d.data.ayahs||[]; 
-      const list=verses.map(v=>({ s:v.surah?.number||v.number?.surah||v.surahNumber||v.surah?.number||v.surah?.id, a:v.number?.inSurah||v.numberInSurah||v.verseNumber })).filter(x=>+x.s&&+x.a); 
-      Cache.juzMap.set(key,list); 
-      return list; 
-    } 
-  }catch(_){ } 
-  // Fallback Alquran.cloud pour Juz
-  try{
-    const a=await fetchJSONWithFallback(API.alquran.juz(j)); 
-    const list=(a.data.ayahs||[]).map(v=>({ s:v.surah.number, a:v.numberInSurah })); 
-    Cache.juzMap.set(key,list); 
-    return list; 
-  }catch(_){ }
-  return [];
-}
-
-/**
- * Récupère le texte, la traduction et l'audio d'un verset.
- * @param {number} s Numéro de sourate
- * @param {number} a Numéro de verset
- * @param {string} trEd Édition de traduction
- * @param {string} reciterEd Édition du récitateur
- */
-async function getAyah(s,a,trEd,reciterEd){ 
-  let arabic="", tr="", audio=""; 
-  
-  // Utilisation de l'API Alquran.cloud pour récupérer Arabe, Audio et Traduction en 1 ou 2 requêtes
-  const audioEdition = reciterEd;
-  const arabicEdition = 'quran-uthmani'; // Texte Othmani
-  const editions = [arabicEdition, audioEdition];
-  if (trEd && trEd !== 'none') {
-      editions.push(trEd);
-  }
-  
-  try{ 
-    // Tente de récupérer tout en une seule requête
-    const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`);
-    if(r && r.data){
-      // Les données sont dans un tableau ordonné par les éditions demandées
-      const parts = r.data.ayahs;
-
-      const arabicPart = parts.find(p => p.edition?.identifier === arabicEdition);
-      const audioPart = parts.find(p => p.edition?.identifier === audioEdition);
-      const trPart = parts.find(p => p.edition?.identifier === trEd);
-
-      arabic = arabicPart?.text || ""; 
-      audio = audioPart?.audio || ""; 
-      tr = trPart?.text || "";
-    }
-  }catch(_){
-      // Fallback si la requête multiple échoue
-      try {
-          const r = await fetchJSONWithFallback(`https://api.alquran.cloud/v1/ayah/${s}:${a}/${arabicEdition},${reciterEd}`);
-          if(r && r.data){
-              arabic = r.data.ayahs[0]?.text || ""; 
-              audio = r.data.ayahs[1]?.audio || ""; 
-          }
-          if (trEd && trEd !== 'none') {
-              const t = await fetchJSONWithFallback(API.alquran.ayahTr(s,a,trEd)); 
-              tr = t?.data?.text||""; 
-          }
-      } catch(__) {
-          console.error(`Double erreur de chargement pour ${s}:${a}`, __);
-      }
-  }
-  
-  // Fallback si tout échoue complètement pour l'Arabe 
-  if(!arabic){ 
-    try{ 
-      const j2=await fetchJSONWithFallback(API.sutanlab.surahAyah(s,a)); 
-      arabic=j2?.data?.text?.arab||j2?.data?.text||""; 
-    }catch(_){} 
-  }
-
-  const out={arabic:arabic||'(texte indisponible)',tr,audio,trEdition:trEd,reciter:reciterEd}; 
-  return out; 
-}
-
-const els={ 
-  main:byId('main'), controls: byId('controls'), btnBack: byId('btn-back'), brand: document.getElementById('brand-home'), 
-  modeJuz: byId('mode-juz'), modeSurah: byId('mode-surah'), 
-  fieldJuz: byId('field-juz'), fieldSurah: byId('field-surah'), 
-  juzChecks: byId('juzChecks'), surahChecks: byId('surahChecks'), surahSearch: byId('surahSearch'), 
-  translation: byId('translation'), reciter: byId('reciter'), 
-  btnRand: byId('btn-random'), btnReroll: byId('btn-reroll'), btnNext: byId('btn-next'), 
-  btnDiag: byId('btn-diagnose'), 
-  btnCacheManager: byId('btn-cache-manager'), 
-  status: byId('status'), meta: byId('meta'), ar: byId('ar'), tr: byId('tr'), chunk: byId('chunk'), 
-  audio: byId('audio'), poolInfo: byId('poolInfo'), card: byId('card'), 
-  juzAll: byId('juz-all'), surahAll: byId('surah-all'),
-  // Éléments de la Modale
-  modalCache: byId('modal-cache'), closeCacheModal: byId('close-cache-modal'),
-  cacheReciters: byId('cacheReciters'), cacheTranslations: byId('cacheTranslations'),
-  cacheSurahStart: byId('cacheSurahStart'), cacheSurahEnd: byId('cacheSurahEnd'),
-  btnStartPreload: byId('btn-start-preload'),
-  preloadProgressContainer: byId('preload-progress-container'),
-  preloadStatusText: byId('preload-status-text'),
-  preloadBar: byId('preload-bar')
-};
-let pool=[], shuffler=new SmartShuffle([],DEFAULT_RECENCY), currentKey=null, currentIndex=-1, isPreloading = false;
-let revealMeta=false; 
-let chunkBaseSurah=null, chunkStartAyah=null;
-
-function setStatus(text,spin=false){ 
-  if(!els.status) return; 
-  els.status.innerHTML = spin ? `<span class=\"spinner\"></span> ${text}` : text; 
-}
-function setPreloadStatus(text, progress){
-    els.preloadStatusText.textContent = text;
-    els.preloadBar.style.width = `${progress}%`;
-    els.preloadProgressContainer.classList.remove('hidden');
-}
-function renderPoolInfo(){ 
-  const surahCount = new Set(pool.map(k=>+k.split(':')[0])).size; 
-  els.poolInfo.textContent = `Pool: ${pool.length} versets · ${surahCount} sourate(s)`; 
-}
-function currentMode(){ return els.modeSurah.checked ? 'surah' : 'juz'; }
-function showModeFields(){ 
-  if(currentMode()==='surah'){ 
-    els.fieldSurah.classList.remove('hidden'); els.fieldJuz.classList.add('hidden'); 
-  } else { 
-    els.fieldJuz.classList.remove('hidden'); els.fieldSurah.classList.add('hidden'); 
-  } 
-}
-function collapseSelection(){ 
-  els.controls.classList.add('hidden'); els.card.classList.remove('hidden'); 
-  els.btnBack.classList.remove('hidden'); 
-  els.main.classList.remove('selection'); els.main.classList.add('collapsed'); 
-}
-function expandSelection(){ 
-  els.controls.classList.remove('hidden'); els.card.classList.add('hidden'); 
-  els.btnBack.classList.add('hidden'); 
-  els.main.classList.add('selection'); els.main.classList.remove('collapsed'); 
-  window.scrollTo({top:0,behavior:'smooth'}); 
-}
-
-function buildCheckboxes(container, options, name, checkedFn){
-    container.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    options.forEach(opt => {
-        const lab=document.createElement('label'); lab.className='chk'; 
-        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=opt.value; cb.name=name; 
-        if (checkedFn && checkedFn(opt.value)) {
-            cb.checked = true;
-        }
-        const span=document.createElement('span'); span.textContent=opt.label; 
-        lab.appendChild(cb); lab.appendChild(span); frag.appendChild(lab);
-    });
-    container.appendChild(frag);
-}
-
-
-async function init(){
-  els.brand?.addEventListener('click', ()=>{ expandSelection(); });
-
-  const jfrag=document.createDocumentFragment();
-  for(let j=1;j<=30;j++){
-    const lab=document.createElement('label'); lab.className='chk';
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=String(j); cb.name='juz';
-    const span=document.createElement('span'); span.textContent=`Juz ${j}`;
-    lab.appendChild(cb); lab.appendChild(span); jfrag.appendChild(lab);
-  }
-  els.juzChecks.appendChild(jfrag);
-
-  setStatus('Chargement des sourates…', true);
-  await buildSurahChecks();
-  showModeFields();
-
-  // Initialisation des options de la modale de cache
-  // On présélectionne le récitateur et la traduction par défauts (sinon tout est décoché)
-  buildCheckboxes(els.cacheReciters, RECITER_OPTIONS, 'cache-reciter', (val) => val === els.reciter.value);
-  buildCheckboxes(els.cacheTranslations, TRANSLATION_OPTIONS, 'cache-translation', (val) => val === els.translation.value);
-  
-  els.modeJuz.addEventListener('change', ()=>{ showModeFields(); pool=[]; currentKey=null; currentIndex=-1; renderPoolInfo(); setStatus('Mode Juz — coche 1+ Juz, puis tire un verset.'); expandSelection(); });
-  els.modeSurah.addEventListener('change', ()=>{ showModeFields(); pool=[]; currentKey=null; currentIndex=-1; renderPoolInfo(); setStatus('Mode Sourate — coche 1+ sourates, puis tire un verset.'); expandSelection(); });
-  els.juzChecks.addEventListener('change', async ()=>{ if(currentMode()==='juz'){ await buildPool(); }});
-  els.surahChecks.addEventListener('change', async ()=>{ if(currentMode()==='surah'){ await buildPool(); }});
-  els.translation.addEventListener('change', async ()=>{ if(currentKey){ await refreshDisplay(); }});
-  els.reciter.addEventListener('change', async ()=>{ if(currentKey){ await refreshDisplay(); }});
-  els.surahSearch.addEventListener('input', (e)=>filterSurahChecks(e.target.value));
-  els.juzAll?.addEventListener('click', ()=>setAllChecks('juzChecks',true));
-  els.surahAll?.addEventListener('click', ()=>setAllChecks('surahChecks',true));
-
-  // Boutons Tirer
-  els.btnRand.addEventListener('click', async (e)=>{ e.preventDefault(); await ensurePool(); if(!pool.length){ setStatus('Pool vide: coche au moins un Juz ou une Sourate.'); return; } const key=shuffler.next(SMART); suppressCardClickUntil=Date.now()+500; await showSingleFromKey(key, true); });
-  els.btnReroll.addEventListener('click', async ()=>{ await ensurePool(); if(!pool.length){ setStatus('Pool vide: coche au moins un Juz ou une Sourate.'); expandSelection(); return; } const key=shuffler.next(SMART); suppressCardClickUntil=Date.now()+400; await showSingleFromKey(key, false); });
-
-  // Navigation
-  els.btnNext.addEventListener('click', async (e)=>{ e.stopPropagation(); if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } });
-  els.btnDiag.addEventListener('click', diagnose);
-  els.btnBack.addEventListener('click', ()=>{ expandSelection(); });
-
-  // Gestion de la Modale : Afficher la modale au clic du bouton
-  els.btnCacheManager.addEventListener('click', ()=>{ 
-      // Log de confirmation
-      console.log('--- Cache Manager Button Clicked ---'); 
-      // Synchroniser les valeurs de la modale avec les valeurs par défaut actuelles
-      const currentReciter = els.reciter.value;
-      const currentTr = els.translation.value;
-      Array.from(els.cacheReciters.querySelectorAll('input')).forEach(cb => {
-          cb.checked = (cb.value === currentReciter);
-      });
-      Array.from(els.cacheTranslations.querySelectorAll('input')).forEach(cb => {
-          cb.checked = (cb.value === currentTr);
-      });
-      
-      els.modalCache.classList.remove('hidden');
-      els.preloadProgressContainer.classList.add('hidden'); // Cacher la progression au nouvel affichage
-  });
-  
-  // Fermer la modale au clic sur le bouton "X" ou sur l'overlay
-  els.closeCacheModal.addEventListener('click', ()=>{ els.modalCache.classList.add('hidden'); });
-  els.modalCache.addEventListener('click', (e)=>{ if(e.target === els.modalCache) els.modalCache.classList.add('hidden'); });
-  els.btnStartPreload.addEventListener('click', preloadSelectedAyahs);
-
-
-  els.card.addEventListener('click', async (evt)=>{ if(Date.now()<suppressCardClickUntil) return; if(!currentKey) return; if(evt.target.closest('button, audio')) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } });
-  window.addEventListener('keydown', async (e)=>{
-    if(e.code==='Space' || e.key===' '){ e.preventDefault(); const au=els.audio; if(au && au.src){ if(au.paused){ try{ await au.play(); }catch(_){ } } else { au.pause(); } } return; }
-    if(e.key==='ArrowRight'){ e.preventDefault(); if(!currentKey) return; if(revealMeta){ await chunkNext(); } else { await revealAndShowChunk(); } }
-    if(e.key==='Enter'){ e.preventDefault(); els.btnReroll.click(); }
-  });
-
-  await buildPool(); setStatus('Prêt.');
-}
-
-async function ensurePool(){ if(!pool.length) await buildPool(); }
-
-async function buildPool(){
-  if(currentMode()==='juz'){
-    const js = selectedFromChecks('juzChecks').map(Number).filter(Boolean);
-    if(!js.length){ setStatus('Coche au moins un Juz.'); pool=[]; renderPoolInfo(); return; }
-    setStatus('Chargement des Juz…', true);
-    let acc=[]; for(const j of js){ try{ const list=await loadJuz(j); acc=acc.concat(list.map(x=>ayahKey(x.s,x.a))); }catch(e){ setStatus('APIs Juz indisponibles pour certains éléments.'); } }
-    pool = uniq(acc);
-  } else {
-    const ss = selectedFromChecks('surahChecks').map(Number).filter(Boolean);
-    if(!ss.length){ setStatus('Coche au moins une sourate.'); pool=[]; renderPoolInfo(); return; }
-    let acc=[]; 
-    for(const s of ss){ 
-      const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
-      const count=meta?.count||200; 
-      
-      // La logique d'itération jusqu'à 'count' est conservée.
-      for(let a=1;a<=count;a++){ 
-        acc.push(ayahKey(s,a)); 
-      } 
-    } 
-    pool = acc;
-  }
-  shuffler.set(pool); shuffler.setHistorySize(DEFAULT_RECENCY);
-  currentKey=null; currentIndex=-1; revealMeta=false; chunkBaseSurah=null; chunkStartAyah=null; clearChunk();
-  renderPoolInfo();
-  setStatus(`${currentMode()==='juz'?'Juz':'Sourate(s)'} prêtes.`);
-}
-
-async function showSingleFromKey(key, collapse=false){
-  currentKey = key; currentIndex = pool.indexOf(key);
-  const [s,a] = key.split(':').map(Number);
-  revealMeta = false; chunkBaseSurah = s; chunkStartAyah = a+1;
-  if(collapse) collapseSelection();
-  await displaySingle(s,a,false);
-}
-
-async function revealAndShowChunk(){ if(!currentKey) return; const [s,a]=currentKey.split(':').map(Number); revealMeta=true; chunkBaseSurah = s; chunkStartAyah = a+1; await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); }
-async function refreshDisplay(){ 
-  if(!currentKey) return;
-  const [s,a]=currentKey.split(':').map(Number); 
-  if(revealMeta){ 
-    await displayChunk(chunkBaseSurah, chunkStartAyah, CHUNK_SIZE, true); 
-  } else { 
-    await displaySingle(s,a,false); 
-  } 
-}
-function clearChunk(){ els.chunk.innerHTML=''; }
-
-async function displaySingle(s,a,showMeta){
-  clearChunk(); els.meta.classList.toggle('hidden', !showMeta);
-  const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const title = meta ? `${pretty(s)} · ${meta.label}` : `Sourate ${s}`;
-  els.meta.textContent = `${title} — Verset ${a}`;
-  els.ar.textContent='Chargement…'; els.tr.textContent=''; els.audio.classList.add('hidden'); els.audio.src='';
-  try{ const data=await getAyah(s,a,els.translation.value,els.reciter.value); els.ar.textContent=data.arabic||'(indisponible)'; els.tr.textContent=data.tr||''; if(data.audio){ els.audio.src=data.audio; els.audio.classList.remove('hidden'); } }
-  catch(e){ els.ar.textContent='(erreur de chargement)'; setStatus('Impossible de charger ce verset.'); }
-}
-
-async function displayChunk(s,start,count,showMeta){
-  els.meta.classList.toggle('hidden', !showMeta);
-  const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); const title = meta ? `${pretty(s)} · ${meta.label}` : `Sourate ${s}`;
-  els.meta.textContent = `${title}`;
-  els.ar.textContent=''; els.tr.textContent=''; clearChunk();
-  
-  const last = meta?.count || 200; // Utilise le nombre de versets réel
-  const end = Math.min(last, start + count - 1);
-  
-  if(start > last){ 
-    els.chunk.innerHTML='<div class="muted">Fin de la sourate.</div>'; 
-    return; 
-  }
-  
-  for(let a=start; a<=end; a++){
-    try{
-      const data=await getAyah(s,a,els.translation.value,els.reciter.value);
-      const div=document.createElement('div'); div.className='chunk-item';
-      const num=document.createElement('div'); num.className='num'; num.textContent=`${title} — ${a}`;
-      const ar=document.createElement('div'); ar.className='arabic'; ar.textContent=data.arabic||'(indisponible)';
-      const tr=document.createElement('div'); tr.className='trans'; tr.textContent=data.tr||'';
-      div.appendChild(num); div.appendChild(ar); if(tr.textContent) div.appendChild(tr);
-      els.chunk.appendChild(div);
-      if(a===start){ 
-        if(data.audio){ 
-          els.audio.src=data.audio; 
-          els.audio.classList.remove('hidden'); 
-        } else { 
-          els.audio.src=''; 
-          els.audio.classList.add('hidden'); 
-        } 
-      }
-    }catch(_){ setStatus('Erreur de chargement sur un verset.'); }
-  }
-}
-
-async function chunkNext(){ 
-  if(!revealMeta) return; 
-  const s=chunkBaseSurah; 
-  const meta=(Cache.surahIndex||[]).find(x=>+x.n===s); 
-  const last=meta?.count||200; 
-  const nextStart=(chunkStartAyah||1)+CHUNK_SIZE; 
-  
-  if(nextStart > last){ 
-    setStatus('Fin de la sourate. Tirage d\'un nouveau verset aléatoire...', true); 
-    // Passe au verset aléatoire suivant après la fin de la sourate.
-    const key = shuffler.next(SMART);
-    suppressCardClickUntil = Date.now() + 400;
-    await showSingleFromKey(key, false);
-    setStatus('Nouveau verset tiré.');
-    return; 
-  } 
-  chunkStartAyah=nextStart; 
-  await displayChunk(s, chunkStartAyah, CHUNK_SIZE, true); 
-}
-
-/**
- * Prépare et lance le téléchargement séquentiel de tous les versets sélectionnés.
- */
-async function preloadSelectedAyahs(){
-  console.log('preloadSelectedAyahs: Démarrage de la fonction de pré-chargement sélectif.');
-  if(isPreloading) return; 
-  
-  const reciterEditions = selectedFromChecks('cacheReciters');
-  const translationEditions = selectedFromChecks('cacheTranslations').filter(ed => ed !== 'none'); // Exclut 'none'
-  const surahStart = Math.max(1, Math.min(114, Number(els.cacheSurahStart.value) || 1));
-  const surahEnd = Math.max(1, Math.min(114, Number(els.cacheSurahEnd.value) || 114));
-  
-  if (reciterEditions.length === 0 && translationEditions.length === 0) {
-      setPreloadStatus('Erreur : Veuillez sélectionner au moins un récitateur ou une traduction à mettre en cache.', 0);
-      return;
-  }
-  if (surahStart > surahEnd) {
-      setPreloadStatus('Erreur : La sourate de début doit être inférieure ou égale à la sourate de fin.', 0);
-      return;
-  }
-  
-  isPreloading = true;
-  els.btnStartPreload.disabled = true;
-  setPreloadStatus('Vérification de la liste des sourates...', 0);
-
-  await loadSurahList(); 
-  const surahs = Cache.surahIndex.filter(s => s.n >= surahStart && s.n <= surahEnd);
-  
-  if(!surahs || surahs.length === 0) {
-      isPreloading = false;
-      els.btnStartPreload.disabled = false;
-      setPreloadStatus('Erreur: Aucune sourate trouvée dans la plage sélectionnée.', 0);
-      return;
-  }
-  
-  // Compte le nombre total d'opérations de mise en cache (nombre de versets * nombre d'éditions distinctes)
-  // L'arabe (quran-uthmani) et l'audio sont mis en cache ensemble pour chaque récitateur.
-  // L'arabe et toutes les traductions sont mis en cache ensemble dans une requête par verset.
-  let totalVersesToCache = 0;
-  
-  // Calcul basé sur les requêtes réelles :
-  // Chaque récitateur sélectionné = 1 requête par verset (Audio + Arabe)
-  totalVersesToCache += surahs.reduce((sum, s) => sum + s.count, 0) * reciterEditions.length;
-  
-  // Si des traductions sont sélectionnées = 1 requête par verset (Arabe + Traductions)
-  if (translationEditions.length > 0) {
-      totalVersesToCache += surahs.reduce((sum, s) => sum + s.count, 0);
-  }
-
-  let versesCached = 0; // Compte le nombre de requêtes de cache réussies
-  
-  setPreloadStatus(`Début du téléchargement (0/${totalVersesToCache} requêtes)...`, 0);
-
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-  const arabicEdition = 'quran-uthmani';
-
-  for (const surah of surahs) {
-    const s = surah.n;
-    const limit = surah.count; 
-
-    for (let a = 1; a <= limit; a++) {
-      
-      // 1. Mise en cache de l'Audio et de l'Arabe (pour chaque récitateur sélectionné)
-      for (const reciterEd of reciterEditions) {
-          let editions = [arabicEdition, reciterEd];
-          const url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`;
-          
-          try {
-            // Utilisation de fetch avec 'force-cache' pour s'assurer que le SW intercepte et met en cache.
-            const response = await fetch(url, { cache: 'force-cache' }); 
-            if (response.ok) { versesCached++; } else { console.warn(`[Preload] Échec cache Audio/Arabe ${reciterEd} pour ${s}:${a}. Status: ${response.status}`); }
-          } catch (error) {
-            console.error(`[Preload] Erreur de fetch Audio/Arabe ${reciterEd} pour ${s}:${a}:`, error);
-          }
-          await delay(50); // Petit délai pour l'API
-      }
-      
-      // 2. Mise en cache des Traductions (une seule requête pour toutes les traductions sélectionnées + Arabe)
-      if (translationEditions.length > 0) {
-          let editions = [arabicEdition, ...translationEditions];
-          const url = `https://api.alquran.cloud/v1/ayah/${s}:${a}/${editions.join(',')}`;
-
-          try {
-            const response = await fetch(url, { cache: 'force-cache' }); 
-            if (response.ok) { versesCached++; } else { console.warn(`[Preload] Échec cache Traductions pour ${s}:${a}. Status: ${response.status}`); }
-          } catch (error) {
-            console.error(`[Preload] Erreur de fetch Traductions pour ${s}:${a}:`, error);
-          }
-          await delay(50); // Petit délai pour l'API
-      }
-      
-
-      // Affichage de la progression
-      if(totalVersesToCache > 0 && (versesCached % 50 === 0 || versesCached === totalVersesToCache)){
-          const progress = (versesCached / totalVersesToCache) * 100;
-          setPreloadStatus(`Téléchargement: ${versesCached}/${totalVersesToCache} requêtes (${progress.toFixed(1)}%)…`, progress);
-      }
-    }
-  }
-
-  isPreloading = false;
-  els.btnStartPreload.disabled = false;
-  // Fermer la modale après le téléchargement
-  els.modalCache.classList.add('hidden'); 
-  setStatus(`Terminé! ${versesCached} requêtes de données sont maintenant disponibles hors-ligne pour la sélection choisie.`, false);
-}
-
-
-async function diagnose(){ 
-  const tests=[ 
-    ['Sutanlab surahList',API.sutanlab.surahList], 
-    ['AlQuran surahList',API.alquran.surahList] 
-  ]; 
-  let ok=0,msgs=[]; 
-  for(const [name,url] of tests){ 
-    try{ 
-      // Utilisation du fallback pour le diagnostic aussi
-      const j=await fetchJSONWithFallback(url); 
-      if(j){ ok++; msgs.push(`${name}: OK`);} 
-      else { msgs.push(`${name}: vide`); } 
-    }catch(e){ msgs.push(`${name}: KO`); } 
-  } 
-  if(els.status) els.status.textContent=`Diagnostic — ${ok}/${tests.length} OK. ${msgs.join(' · ')}`; 
-}
-
-// --- AJOUT PWA ---
-// Enregistrement du Service Worker
+// Service Worker Registration
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js') 
-      .then(reg => console.log('Service Worker enregistré.', reg))
-      .catch(err => console.log('Échec de l\'enregistrement du Service Worker:', err));
-  });
+    navigator.serviceWorker.register('sw.js').catch(console.error);
 }
-// --- FIN AJOUT PWA ---
 
-init();
+const { createApp, ref, computed, onMounted, watch } = Vue;
+
+// Enhanced Storage Manager
+class StorageManager {
+    constructor() {
+        this.prefix = 'murajaah_';
+        this.initDB();
+    }
+
+    initDB() {
+        if (!localStorage.getItem(this.prefix + 'version')) {
+            localStorage.setItem(this.prefix + 'version', '1.0');
+        }
+    }
+
+    setAyah(surah, ayah, data) {
+        const key = `${this.prefix}ayah_${surah}_${ayah}`;
+        localStorage.setItem(key, JSON.stringify({
+            arabic: data.arabic,
+            tr: data.tr || '',
+            audio: data.audio || '',
+            timestamp: Date.now()
+        }));
+    }
+
+    getAyah(surah, ayah) {
+        const key = `${this.prefix}ayah_${surah}_${ayah}`;
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    }
+
+    setSurahMeta(surah, meta) {
+        const key = `${this.prefix}surah_meta_${surah}`;
+        localStorage.setItem(key, JSON.stringify(meta));
+    }
+
+    getSurahMeta(surah) {
+        const key = `${this.prefix}surah_meta_${surah}`;
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    }
+
+    getStats() {
+        let totalAyahs = 0;
+        let surahs = new Set();
+        let totalSize = 0;
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith(this.prefix + 'ayah_')) {
+                totalAyahs++;
+                const surahNum = key.split('_')[2];
+                surahs.add(surahNum);
+                totalSize += (localStorage.getItem(key) || '').length;
+            }
+        }
+
+        return {
+            totalAyahs,
+            completeSurahs: surahs.size,
+            sizeKB: Math.round(totalSize / 1024)
+        };
+    }
+
+    clearAll() {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith(this.prefix)) {
+                keys.push(key);
+            }
+        }
+        keys.forEach(key => localStorage.removeItem(key));
+    }
+}
+
+const storage = new StorageManager();
+
+// API Manager with offline fallback
+class APIManager {
+    constructor() {
+        this.baseURL = 'https://api.alquran.cloud/v1';
+    }
+
+    async fetchWithFallback(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok');
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch failed:', error);
+            throw error;
+        }
+    }
+
+    async getAyah(surah, ayah, edition = 'quran-uthmani') {
+        // Check cache first
+        const cached = storage.getAyah(surah, ayah);
+        if (cached && cached.arabic) {
+            return { data: cached };
+        }
+
+        // Fetch from API
+        const url = `${this.baseURL}/ayah/${surah}:${ayah}/${edition}`;
+        return this.fetchWithFallback(url);
+    }
+
+    async getSurahList() {
+        const cached = localStorage.getItem('surahList');
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
+        const url = `${this.baseURL}/surah`;
+        const response = await this.fetchWithFallback(url);
+        const surahs = response.data.map(s => ({
+            number: s.number,
+            nameAr: s.name,
+            nameEn: s.englishName,
+            numberOfAyahs: s.numberOfAyahs
+        }));
+        
+        localStorage.setItem('surahList', JSON.stringify(surahs));
+        return surahs;
+    }
+}
+
+const api = new APIManager();
+
+// Vue App
+createApp({
+    setup() {
+        // State
+        const view = ref('config');
+        const mode = ref('surah');
+        const loading = ref(false);
+        const surahList = ref([]);
+        const selectedSurahs = ref([]);
+        const selectedJuz = ref([]);
+        const searchQuery = ref('');
+        const settings = ref({ 
+            reciter: 'ar.alafasy', 
+            translation: 'none' 
+        });
+        
+        // Online/Offline
+        const isOnline = ref(navigator.onLine);
+        const showCacheInfo = ref(false);
+        const cacheStats = ref({ totalAyahs: 0, completeSurahs: 0, sizeKB: 0 });
+        
+        // Download Progress
+        const downloadProgress = ref({
+            active: false,
+            message: '',
+            percent: 0
+        });
+
+        // Session
+        const pool = ref([]);
+        const history = ref([]);
+        const sessionCount = ref(0);
+        const currentKey = ref(null);
+        const currentData = ref({ arabic: '', tr: '', audio: '' });
+        const reveal = ref(false);
+        const chunkData = ref([]);
+        const audioPlayer = ref(null);
+
+        // Computed
+        const filteredSurahs = computed(() => {
+            if (!searchQuery.value) return surahList.value;
+            const q = searchQuery.value.toLowerCase();
+            return surahList.value.filter(s =>
+                s.nameEn.toLowerCase().includes(q) ||
+                String(s.number).includes(q)
+            );
+        });
+
+        const poolSize = computed(() => {
+            if (mode.value === 'surah') {
+                return selectedSurahs.value.reduce((acc, sNum) => {
+                    const s = surahList.value.find(x => x.number === sNum);
+                    return acc + (s ? s.numberOfAyahs - 1 : 0);
+                }, 0);
+            }
+            return selectedJuz.value.length * 200;
+        });
+
+        const currentAudioUrl = computed(() => currentData.value.audio);
+
+        const hasOfflineData = computed(() => {
+            if (mode.value === 'surah') {
+                return selectedSurahs.value.some(s => isSurahCached(s));
+            }
+            return false;
+        });
+
+        // Methods
+        function updateCacheStats() {
+            cacheStats.value = storage.getStats();
+        }
+
+        function isSurahCached(surahNum) {
+            const meta = storage.getSurahMeta(surahNum);
+            return meta && meta.complete;
+        }
+
+        async function downloadSelected() {
+            downloadProgress.value = {
+                active: true,
+                message: 'Téléchargement en cours...',
+                percent: 0
+            };
+
+            try {
+                const surahs = mode.value === 'surah' ? selectedSurahs.value : [];
+                let totalAyahs = 0;
+                let downloadedAyahs = 0;
+
+                // Calculate total
+                for (const sNum of surahs) {
+                    const s = surahList.value.find(x => x.number === sNum);
+                    if (s) totalAyahs += s.numberOfAyahs;
+                }
+
+                // Download each surah
+                for (const sNum of surahs) {
+                    const s = surahList.value.find(x => x.number === sNum);
+                    if (!s) continue;
+
+                    downloadProgress.value.message = `Téléchargement: ${s.nameEn}`;
+
+                    for (let a = 1; a <= s.numberOfAyahs; a++) {
+                        try {
+                            // Arabic text
+                            const arData = await api.getAyah(sNum, a, 'quran-uthmani');
+                            
+                            // Translation if needed
+                            let trData = null;
+                            if (settings.value.translation !== 'none') {
+                                trData = await api.getAyah(sNum, a, settings.value.translation);
+                            }
+
+                            // Audio URL
+                            const audioData = await api.getAyah(sNum, a, settings.value.reciter);
+
+                            // Store in cache
+                            storage.setAyah(sNum, a, {
+                                arabic: arData.data.text || arData.data.arabic,
+                                tr: trData?.data.text || '',
+                                audio: audioData?.data.audio || ''
+                            });
+
+                            downloadedAyahs++;
+                            downloadProgress.value.percent = Math.round((downloadedAyahs / totalAyahs) * 100);
+                        } catch (e) {
+                            console.error(`Failed to download ${sNum}:${a}`, e);
+                        }
+                    }
+
+                    // Mark surah as complete
+                    storage.setSurahMeta(sNum, {
+                        complete: true,
+                        numberOfAyahs: s.numberOfAyahs,
+                        downloadDate: Date.now()
+                    });
+                }
+
+                updateCacheStats();
+            } finally {
+                downloadProgress.value = {
+                    active: false,
+                    message: '',
+                    percent: 0
+                };
+            }
+        }
+
+        function toggleAll(select) {
+            if (mode.value === 'surah') {
+                selectedSurahs.value = select ? surahList.value.map(s => s.number) : [];
+            } else {
+                selectedJuz.value = select ? Array.from({ length: 30 }, (_, i) => i + 1) : [];
+            }
+        }
+
+        async function startRevision() {
+            loading.value = true;
+            pool.value = [];
+
+            if (mode.value === 'surah') {
+                for (const s of selectedSurahs.value) {
+                    const meta = surahList.value.find(x => x.number === s);
+                    if (!meta) continue;
+                    for (let i = 1; i < meta.numberOfAyahs; i++) {
+                        pool.value.push(`${s}:${i}`);
+                    }
+                }
+            }
+
+            pool.value.sort(() => Math.random() - 0.5);
+            view.value = 'card';
+            loading.value = false;
+            nextCard();
+        }
+
+        function returnToHome() {
+            view.value = 'config';
+            reveal.value = false;
+            if (audioPlayer.value) audioPlayer.value.pause();
+        }
+
+        function getSurahName(key) {
+            if (!key) return '';
+            const [s] = key.split(':');
+            const meta = surahList.value.find(x => x.number == s);
+            return meta ? meta.nameEn : '';
+        }
+
+        function getAyahNumber(key) {
+            if (!key) return '';
+            const [, a] = key.split(':');
+            return a || '';
+        }
+
+        async function nextCard() {
+            reveal.value = false;
+            chunkData.value = [];
+
+            if (!pool.value.length) {
+                returnToHome();
+                return;
+            }
+
+            const idx = Math.floor(Math.random() * pool.value.length);
+            currentKey.value = pool.value[idx];
+            sessionCount.value++;
+
+            loading.value = true;
+            try {
+                const [s, a] = currentKey.value.split(':');
+                await loadAyahData(s, a);
+            } catch (e) {
+                currentData.value.arabic = 'Erreur de chargement';
+            }
+            loading.value = false;
+        }
+
+        async function loadAyahData(surah, ayah) {
+            // Try cache first
+            const cached = storage.getAyah(surah, ayah);
+            if (cached) {
+                currentData.value = cached;
+                return;
+            }
+
+            // Fetch from API if online
+            if (!navigator.onLine) {
+                currentData.value = { 
+                    arabic: 'Pas de données hors ligne pour ce verset', 
+                    tr: '', 
+                    audio: '' 
+                };
+                return;
+            }
+
+            try {
+                const arData = await api.getAyah(surah, ayah, 'quran-uthmani');
+                currentData.value.arabic = arData.data.text;
+
+                if (settings.value.translation !== 'none') {
+                    const trData = await api.getAyah(surah, ayah, settings.value.translation);
+                    currentData.value.tr = trData.data.text;
+                }
+
+                const audioData = await api.getAyah(surah, ayah, settings.value.reciter);
+                currentData.value.audio = audioData.data.audio;
+
+                // Cache for future use
+                storage.setAyah(surah, ayah, currentData.value);
+            } catch (e) {
+                console.error('Failed to load ayah', e);
+            }
+        }
+
+        async function revealCard() {
+            reveal.value = true;
+            // Load next ayahs
+            const [s, a] = currentKey.value.split(':').map(Number);
+            const meta = surahList.value.find(x => x.number === s);
+            if (!meta) return;
+
+            const nextAyahs = [];
+            for (let i = a + 1; i <= Math.min(a + 3, meta.numberOfAyahs); i++) {
+                const cached = storage.getAyah(s, i);
+                if (cached) {
+                    nextAyahs.push({
+                        ayah: i,
+                        arabic: cached.arabic,
+                        tr: cached.tr
+                    });
+                }
+            }
+            chunkData.value = nextAyahs;
+        }
+
+        function clearCache() {
+            if (confirm('Supprimer toutes les données en cache ?')) {
+                storage.clearAll();
+                updateCacheStats();
+                showCacheInfo.value = false;
+            }
+        }
+
+        // Lifecycle
+        onMounted(async () => {
+            // Load surah list
+            surahList.value = await api.getSurahList();
+            
+            // Update cache stats
+            updateCacheStats();
+
+            // Online/offline listeners
+            window.addEventListener('online', () => isOnline.value = true);
+            window.addEventListener('offline', () => isOnline.value = false);
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (view.value !== 'card') return;
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    if (!reveal.value) revealCard();
+                    else nextCard();
+                }
+            });
+        });
+
+        // Save settings
+        watch(settings, (newVal) => {
+            localStorage.setItem('settings', JSON.stringify(newVal));
+        }, { deep: true });
+
+        return {
+            view, mode, loading, surahList, filteredSurahs, selectedSurahs, selectedJuz,
+            searchQuery, settings, poolSize, sessionCount, currentData, currentAudioUrl,
+            reveal, chunkData, audioPlayer, currentKey, isOnline, showCacheInfo, cacheStats,
+            downloadProgress, hasOfflineData,
+            toggleAll, startRevision, returnToHome, nextCard, revealCard, 
+            getSurahName, getAyahNumber, updateCacheStats, isSurahCached,
+            downloadSelected, clearCache
+        };
+    }
+}).mount('#app');
 </script>
+
 </body>
 </html>
