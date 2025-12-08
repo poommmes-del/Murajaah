@@ -1,629 +1,73 @@
-<!DOCTYPE html>
-<html lang="fr" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <meta name="theme-color" content="#064e3b">
-    
-    <!-- PWA Meta Tags for iOS -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Murajaah">
-    
-    <!-- PWA Meta Tags for Android -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Murajaah">
-    
-    <title>Murajaah — Révision du Noble Coran</title>
-    
-    <!-- Manifest MUST be before any script -->
-    <link rel="manifest" href="/manifest.json">
-
-    <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        kufi: ['Reem Kufi', 'sans-serif'],
-                        quran: ['Scheherazade New', 'serif'],
-                    },
-                    colors: {
-                        primary: {
-                            400: '#34d399',
-                            500: '#10b981',
-                            600: '#059669',
-                            800: '#065f46',
-                            900: '#064e3b',
-                        },
-                        night: {
-                            800: '#1e293b',
-                            900: '#0f172a',
-                            950: '#020617'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
-
-        .arabic-text {
-            line-height: 2.5;
-            direction: rtl;
-            font-feature-settings: "cv01" on;
-        }
-        [v-cloak] { display: none; }
-
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .no-select {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Fix for mobile layout */
-        .mobile-content-height {
-            height: calc(100vh - 250px);
-        }
-
-        /* Ensure clickable buttons */
-        button {
-            position: relative;
-            z-index: 10;
-        }
-    </style>
-</head>
-<body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans selection:bg-primary-500 selection:text-white no-select">
-
-<div id="app" v-cloak class="h-full flex flex-col relative bg-gradient-to-r from-night-900 to-night-950">
-
-    <!-- PWA Install Prompt -->
-    <div v-if="showInstallPrompt" class="fixed top-2 left-2 right-2 z-50 bg-primary-600 text-white p-3 rounded-xl shadow-xl">
-        <div class="flex items-center justify-between">
-            <div class="flex-1 mr-3">
-                <div class="text-sm font-bold">Installer l'application</div>
-                <div class="text-xs opacity-90">Accédez rapidement à Murajaah depuis votre écran d'accueil</div>
-            </div>
-            <div class="flex gap-2">
-                <button @click="installPWA" class="px-4 py-2 bg-white text-primary-600 rounded-lg text-sm font-bold">Installer</button>
-                <button @click="showInstallPrompt = false" class="px-3 py-2 bg-primary-700 rounded-lg text-sm">Plus tard</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Offline Banner -->
-    <div v-if="!isOnline" class="bg-yellow-900/90 text-yellow-100 text-center py-2 text-xs font-medium">
-        Mode Hors Ligne
-    </div>
-
-    <!-- Download Progress Bar -->
-    <div v-if="downloadProgress.active" class="fixed top-0 left-0 right-0 z-40 h-1 bg-white/5">
-        <div class="h-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-300" 
-             :style="{width: downloadProgress.percent + '%'}"></div>
-    </div>
-
-    <!-- Header -->
-    <header class="flex justify-between items-center px-4 py-4 border-b border-white/5 bg-night-950/50 backdrop-blur-md flex-shrink-0">
-        <div class="flex items-center gap-2 cursor-pointer" @click="returnToHome">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-900 flex items-center justify-center">
-                <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect x="7" y="7" width="10" height="10" rx="1" stroke-width="1.5"/>
-                    <circle cx="12" cy="12" r="2" fill="currentColor"/>
-                </svg>
-            </div>
-            <div>
-                <h1 class="text-lg font-kufi font-bold text-primary-400">Murajaah</h1>
-                <span class="text-[9px] text-white/60 font-medium tracking-wider uppercase">RÉVISION</span>
-            </div>
-        </div>
-
-        <button @click="showCacheInfo = true" class="p-2 rounded-lg bg-white/5 relative z-20">
-            <svg class="w-5 h-5" :class="cacheStats.totalAyahs > 0 ? 'text-primary-400' : 'text-slate-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            <div v-if="cacheStats.totalAyahs > 0" class="absolute -top-1 -right-1 w-2 h-2 bg-primary-400 rounded-full"></div>
-        </button>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 overflow-hidden flex flex-col relative">
-
-        <!-- Configuration View -->
-        <div v-if="view === 'config'" class="h-full flex flex-col">
-            
-            <!-- Mobile Layout -->
-            <div class="lg:hidden flex flex-col h-full">
-                
-                <!-- Title -->
-                <div class="px-4 py-3">
-                    <h2 class="text-2xl font-kufi text-white">Configuration</h2>
-                    <p class="text-sm text-slate-400 mt-1">Sélectionnez les parties à réviser</p>
-                </div>
-
-                <!-- Mobile Tabs -->
-                <div class="flex bg-black/20 mx-4 p-1 rounded-xl mb-3">
-                    <button @click="mobileTab = 'selection'" 
-                        :class="mobileTab === 'selection' ? 'bg-primary-600 text-white' : 'text-slate-400'" 
-                        class="flex-1 py-2 rounded-lg text-sm font-medium transition-all">
-                        Sélection
-                    </button>
-                    <button @click="mobileTab = 'settings'" 
-                        :class="mobileTab === 'settings' ? 'bg-primary-600 text-white' : 'text-slate-400'" 
-                        class="flex-1 py-2 rounded-lg text-sm font-medium transition-all">
-                        Paramètres
-                    </button>
-                </div>
-
-                <!-- Mobile Content Area (Scrollable) -->
-                <div class="flex-1 overflow-hidden px-4 pb-20">
-                    
-                    <!-- Selection Tab -->
-                    <div v-if="mobileTab === 'selection'" class="h-full flex flex-col">
-                        
-                        <!-- Mode Toggle -->
-                        <div class="mb-3">
-                            <div class="flex bg-black/40 p-1 rounded-xl">
-                                <button @click="mode = 'surah'" 
-                                    :class="mode === 'surah' ? 'bg-primary-600 text-white' : 'text-slate-400'" 
-                                    class="flex-1 py-2 rounded-lg text-sm font-medium">
-                                    Sourate
-                                </button>
-                                <button @click="mode = 'juz'" 
-                                    :class="mode === 'juz' ? 'bg-primary-600 text-white' : 'text-slate-400'" 
-                                    class="flex-1 py-2 rounded-lg text-sm font-medium">
-                                    Juz
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Search & Actions -->
-                        <div class="flex gap-2 mb-3">
-                            <input v-if="mode === 'surah'" v-model="searchQuery" type="text" 
-                                placeholder="Rechercher..." 
-                                class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm">
-                            <div v-else class="flex-1"></div>
-                            <button @click="toggleAll(true)" class="px-3 py-2 text-xs bg-primary-600/20 text-primary-400 rounded-lg">Tout</button>
-                            <button @click="toggleAll(false)" class="px-3 py-2 text-xs bg-white/5 text-slate-400 rounded-lg">Rien</button>
-                        </div>
-
-                        <!-- Selection Grid (Scrollable) -->
-                        <div class="flex-1 overflow-y-auto glass-panel rounded-2xl p-3">
-                            
-                            <!-- Surah List -->
-                            <div v-if="mode === 'surah'" class="space-y-2">
-                                <label v-for="s in filteredSurahs" :key="s.number" 
-                                    class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all active:scale-95"
-                                    :class="selectedSurahs.includes(s.number) ? 'bg-primary-900/30 border-primary-500/30' : 'bg-white/5 border-white/5'">
-                                    <input type="checkbox" :value="s.number" v-model="selectedSurahs" class="hidden">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                        :class="selectedSurahs.includes(s.number) ? 'bg-primary-500 text-white' : 'bg-white/10 text-slate-500'">
-                                        {{ s.number }}
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-semibold truncate">{{ s.nameEn }}</div>
-                                        <div class="text-xs text-slate-400">{{ s.numberOfAyahs }} versets</div>
-                                    </div>
-                                    <svg v-if="isSurahCached(s.number)" class="w-4 h-4 text-primary-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-                                    </svg>
-                                </label>
-                            </div>
-
-                            <!-- Juz Grid -->
-                            <div v-else class="grid grid-cols-4 gap-2">
-                                <label v-for="j in 30" :key="j" class="cursor-pointer active:scale-95">
-                                    <input type="checkbox" :value="j" v-model="selectedJuz" class="hidden peer">
-                                    <div class="aspect-square rounded-xl border flex flex-col items-center justify-center text-sm peer-checked:bg-primary-600 peer-checked:border-primary-500 bg-white/5 border-white/10 relative">
-                                        <span class="text-[9px] opacity-60">JUZ</span>
-                                        <span class="text-lg font-kufi font-bold">{{ j }}</span>
-                                        <div v-if="isJuzCached(j)" class="absolute top-1 right-1">
-                                            <div class="w-2 h-2 bg-primary-400 rounded-full"></div>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Settings Tab -->
-                    <div v-else class="h-full flex flex-col space-y-4">
-                        
-                        <!-- Download Section -->
-                        <div v-if="(selectedSurahs.length > 0 || selectedJuz.length > 0) && !downloadProgress.active" 
-                             class="p-4 bg-primary-900/20 rounded-xl border border-primary-500/20">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs text-primary-400 font-medium">Téléchargement offline</span>
-                                <span v-if="downloadEstimate.versets > 0" class="text-[10px] text-slate-400">
-                                    ~{{ downloadEstimate.versets }} versets
-                                </span>
-                            </div>
-                            <button @click="downloadSelected" 
-                                class="w-full py-2.5 bg-primary-600/20 text-primary-300 rounded-lg text-xs font-medium active:bg-primary-600/30">
-                                {{ hasOfflineData ? '🔄 Mettre à jour' : '📥 Télécharger' }}
-                            </button>
-                        </div>
-
-                        <!-- Settings Options -->
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-2">Récitateur</label>
-                                <select v-model="settings.reciter" 
-                                    class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2.5">
-                                    <option value="ar.alafasy">Mishary Alafasy</option>
-                                    <option value="ar.hudhaify">Ali Al-Hudhaify</option>
-                                    <option value="ar.husary">Mahmoud Al-Husary</option>
-                                    <option value="ar.minshawi">Al-Minshawi</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-2">Traduction</label>
-                                <select v-model="settings.translation" 
-                                    class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2.5">
-                                    <option value="none">Arabe seul</option>
-                                    <option value="fr.hamidullah">Français</option>
-                                    <option value="en.sahih">English</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mobile Bottom Actions (Fixed) -->
-                <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-night-950/95 backdrop-blur z-30">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-slate-400">Sélection</span>
-                        <span class="text-xl font-bold text-white">
-                            {{ poolSize }} 
-                            <span class="text-xs text-primary-400 font-normal">versets</span>
-                        </span>
-                    </div>
-                    <button 
-                        @click="startRevision" 
-                        :disabled="poolSize === 0"
-                        class="w-full py-3.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform">
-                        Commencer la révision
-                    </button>
-                </div>
-            </div>
-
-            <!-- Desktop Layout -->
-            <div class="hidden lg:flex flex-col h-full p-6">
-                <div class="text-center mb-8">
-                    <h2 class="text-4xl font-kufi text-white mb-3">Configuration</h2>
-                    <p class="text-slate-400 text-lg">Sélectionnez les parties à réviser</p>
-                </div>
-
-                <div class="grid grid-cols-12 gap-6 flex-1 min-h-0">
-                    
-                    <!-- Settings Panel -->
-                    <div class="col-span-4 flex flex-col gap-4 p-6 rounded-3xl glass-panel">
-                        
-                        <!-- Mode Selection -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Mode</label>
-                            <div class="flex bg-black/40 p-1.5 rounded-xl">
-                                <button @click="mode = 'surah'" 
-                                    :class="mode === 'surah' ? 'bg-primary-600 text-white' : 'text-slate-400'" 
-                                    class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all">
-                                    Sourate
-                                </button>
-                                <button @click="mode = 'juz'" 
-                                    :class="mode === 'juz' ? 'bg-primary-600 text-white' : 'text-slate-400'" 
-                                    class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all">
-                                    Juz
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Settings -->
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-2">Récitateur</label>
-                                <select v-model="settings.reciter" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2">
-                                    <option value="ar.alafasy">Mishary Alafasy</option>
-                                    <option value="ar.hudhaify">Ali Al-Hudhaify</option>
-                                    <option value="ar.husary">Mahmoud Al-Husary</option>
-                                    <option value="ar.minshawi">Al-Minshawi</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-2">Traduction</label>
-                                <select v-model="settings.translation" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2">
-                                    <option value="none">Arabe seul</option>
-                                    <option value="fr.hamidullah">Français</option>
-                                    <option value="en.sahih">English</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Start Button -->
-                        <div class="mt-auto pt-4 border-t border-white/5">
-                            <div class="flex items-center justify-between mb-3 px-2">
-                                <span class="text-xs text-slate-400">Sélection</span>
-                                <span class="text-xl font-bold text-white">{{ poolSize }} <span class="text-xs text-primary-400">versets</span></span>
-                            </div>
-                            <button @click="startRevision" :disabled="poolSize === 0"
-                                class="w-full py-3.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold rounded-2xl disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform">
-                                Commencer la révision
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Selection Grid -->
-                    <div class="col-span-8 glass-panel rounded-3xl flex flex-col overflow-hidden">
-                        <div class="p-4 border-b border-white/5 flex gap-3 items-center">
-                            <input v-if="mode === 'surah'" v-model="searchQuery" type="text" 
-                                placeholder="Rechercher..." 
-                                class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm">
-                            <button @click="toggleAll(true)" class="px-3 py-2 text-xs bg-primary-600/20 text-primary-400 rounded-lg">Tout</button>
-                            <button @click="toggleAll(false)" class="px-3 py-2 text-xs bg-white/5 text-slate-400 rounded-lg">Rien</button>
-                        </div>
-
-                        <div class="flex-1 overflow-y-auto p-4">
-                            <!-- Surah Grid -->
-                            <div v-if="mode === 'surah'" class="grid grid-cols-3 gap-3">
-                                <label v-for="s in filteredSurahs" :key="s.number" 
-                                    class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:scale-105"
-                                    :class="selectedSurahs.includes(s.number) ? 'bg-primary-900/30 border-primary-500/30' : 'bg-white/5 border-white/5'">
-                                    <input type="checkbox" :value="s.number" v-model="selectedSurahs" class="hidden">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                                        :class="selectedSurahs.includes(s.number) ? 'bg-primary-500 text-white' : 'bg-white/10 text-slate-500'">
-                                        {{ s.number }}
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-semibold truncate">{{ s.nameEn }}</div>
-                                        <div class="text-xs text-slate-400">{{ s.numberOfAyahs }} versets</div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <!-- Juz Grid -->
-                            <div v-else class="grid grid-cols-6 gap-3">
-                                <label v-for="j in 30" :key="j" class="cursor-pointer hover:scale-105 transition-transform">
-                                    <input type="checkbox" :value="j" v-model="selectedJuz" class="hidden peer">
-                                    <div class="aspect-square rounded-xl border flex flex-col items-center justify-center peer-checked:bg-primary-600 peer-checked:border-primary-500 bg-white/5 border-white/10">
-                                        <span class="text-[10px] opacity-60">JUZ</span>
-                                        <span class="text-2xl font-kufi font-bold">{{ j }}</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card View -->
-        <div v-else-if="view === 'card'" class="h-full flex flex-col p-4">
-            
-            <!-- Info Bar -->
-            <div class="flex justify-between items-center text-xs text-slate-500 mb-3">
-                <span v-if="reveal" class="font-kufi text-primary-400">
-                    {{ getSurahName(currentKey) }} - V.{{ getAyahNumber(currentKey) }}
-                </span>
-                <span v-else></span>
-                <span class="bg-white/5 px-2 py-1 rounded-full">{{ sessionCount }} révisés</span>
-            </div>
-
-            <!-- Card Container -->
-            <div class="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col relative">
-                
-                <!-- Loading -->
-                <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-50 bg-night-950/60">
-                    <div class="w-12 h-12 rounded-full border-4 border-white/10 border-t-primary-500 animate-spin"></div>
-                </div>
-
-                <!-- Content Area -->
-                <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center">
-                    
-                    <!-- Arabic Text -->
-                    <div class="text-center">
-                        <p class="text-3xl sm:text-4xl lg:text-5xl font-quran text-white leading-[2.2]" dir="rtl">
-                            {{ currentData?.arabic || '...' }}
-                        </p>
-                    </div>
-
-                    <!-- Audio Player (visible when revealed) -->
-                    <div v-if="currentAudioUrl && reveal" class="w-full max-w-sm mt-6 bg-black/20 p-2 rounded-xl">
-                        <audio ref="audioPlayer" :src="currentAudioUrl" class="w-full h-8" controls></audio>
-                    </div>
-
-                    <!-- Translation & Next (visible when revealed) -->
-                    <div v-if="reveal" class="w-full mt-6 space-y-4 animate-fade-in">
-                        <div v-if="currentData.tr" class="text-center">
-                            <p class="text-sm text-slate-300 italic">{{ currentData.tr }}</p>
-                        </div>
-
-                        <div v-if="chunkData.length" class="space-y-2">
-                            <div class="text-xs text-primary-400 uppercase tracking-widest text-center">Suite</div>
-                            <div v-for="c in chunkData" :key="c.ayah" 
-                                class="bg-black/20 rounded-xl p-3 border border-white/5">
-                                <p class="font-quran text-xl text-white mb-1" dir="rtl">{{ c.arabic }}</p>
-                                <p v-if="c.tr" class="text-xs text-slate-400">{{ c.tr }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Button -->
-                <div class="p-4 bg-gradient-to-t from-night-950 to-transparent">
-                    <button v-if="!reveal" @click="revealCard" 
-                        class="w-full py-3 bg-white/10 backdrop-blur text-white rounded-xl border border-white/10 active:scale-95 transition-transform">
-                        Révéler la suite
-                    </button>
-                    <button v-else @click="nextCard" 
-                        class="w-full py-3 bg-primary-600 text-white font-bold rounded-xl active:scale-95 transition-transform">
-                        Verset suivant →
-                    </button>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Cache Info Modal -->
-    <div v-if="showCacheInfo" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50" @click="showCacheInfo = false">
-        <div class="bg-night-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 border-t sm:border border-white/10" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold">Stockage Local</h3>
-                <button @click="showCacheInfo = false" class="p-2 -mr-2">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="space-y-3 text-sm">
-                <div class="flex justify-between py-2 border-b border-white/5">
-                    <span class="text-slate-400">Versets en cache</span>
-                    <span class="font-mono text-primary-400">{{ cacheStats.totalAyahs }}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-white/5">
-                    <span class="text-slate-400">Sourates complètes</span>
-                    <span class="font-mono">{{ cacheStats.completeSurahs }}</span>
-                </div>
-                <div class="flex justify-between py-2">
-                    <span class="text-slate-400">Espace utilisé</span>
-                    <span class="font-mono">{{ formatSize(cacheStats.sizeKB) }}</span>
-                </div>
-            </div>
-            
-            <div class="mt-6 flex gap-3">
-                <button @click="showCacheInfo = false" class="flex-1 py-2 bg-white/10 text-white rounded-lg text-sm">
-                    Fermer
-                </button>
-                <button @click="clearCache" class="flex-1 py-2 bg-red-600/20 text-red-400 rounded-lg text-sm">
-                    Vider le cache
-                </button>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<script>
-// Initialize PWA
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // Show install button
-    if (window.app) {
-        window.app.showInstallPrompt = true;
+{
+  "name": "Murajaah - Révision du Noble Coran",
+  "short_name": "Murajaah",
+  "description": "Application de révision du Noble Coran avec mode hors ligne",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#064e3b",
+  "dir": "auto",
+  "lang": "fr",
+  "categories": ["education", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "/screenshot1.png",
+      "sizes": "540x720",
+      "type": "image/png"
     }
-});
-
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => console.log('SW registered'))
-            .catch(err => console.log('SW registration failed'));
-    });
+  ],
+  "icons": [
+    {
+      "src": "/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
 }
-
-const { createApp, ref, computed, onMounted, watch } = Vue;
-
-// [Le reste du code JavaScript reste identique...]
-// Storage Manager, API Manager, etc.
-
-const app = createApp({
-    setup() {
-        // PWA Install
-        const showInstallPrompt = ref(false);
-        
-        // State
-        const view = ref('config');
-        const mode = ref('surah');
-        const mobileTab = ref('selection');
-        const loading = ref(false);
-        const surahList = ref([]);
-        const selectedSurahs = ref([]);
-        const selectedJuz = ref([]);
-        const searchQuery = ref('');
-        const settings = ref({ 
-            reciter: 'ar.alafasy', 
-            translation: 'none' 
-        });
-        
-        // Online/Offline
-        const isOnline = ref(navigator.onLine);
-        const showCacheInfo = ref(false);
-        const cacheStats = ref({ totalAyahs: 0, completeSurahs: 0, sizeKB: 0 });
-        
-        // Download Progress
-        const downloadProgress = ref({
-            active: false,
-            message: '',
-            percent: 0
-        });
-
-        // Session
-        const pool = ref([]);
-        const sessionCount = ref(0);
-        const currentKey = ref(null);
-        const currentData = ref({ arabic: '', tr: '', audio: '' });
-        const reveal = ref(false);
-        const chunkData = ref([]);
-        const audioPlayer = ref(null);
-
-        // Install PWA
-        async function installPWA() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response: ${outcome}`);
-                deferredPrompt = null;
-                showInstallPrompt.value = false;
-            }
-        }
-
-        // All other methods remain the same...
-        // [Copier toutes les méthodes depuis la version précédente]
-
-        // Expose to window for PWA
-        window.app = { showInstallPrompt };
-
-        return {
-            // PWA
-            showInstallPrompt,
-            installPWA,
-            // ... rest of the returns
-            view, mode, mobileTab, loading, surahList, 
-            // ... etc
-        };
-    }
-}).mount('#app');
-</script>
-
-</body>
-</html>
