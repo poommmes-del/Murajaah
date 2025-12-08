@@ -80,6 +80,16 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
+
+        /* Modal animation */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-enter {
+            animation: slideUp 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans selection:bg-primary-500 selection:text-white no-select">
@@ -91,18 +101,21 @@
         <span>Mode Hors Ligne - Données en cache uniquement</span>
     </div>
 
-    <!-- Progress Bar for Downloads -->
-    <div v-if="downloadProgress.active" class="fixed top-0 left-0 right-0 z-50 bg-night-900/95 backdrop-blur-md border-b border-white/10">
-        <div class="px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-6 h-6 rounded-full border-2 border-primary-500 border-t-transparent animate-spin"></div>
-                <span class="text-sm">{{ downloadProgress.message }}</span>
+    <!-- Download Progress Bar (Minimalist) -->
+    <div v-if="downloadProgress.active" class="fixed top-0 left-0 right-0 z-50 h-1 bg-white/5">
+        <div class="h-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-300" 
+             :style="{width: downloadProgress.percent + '%'}"></div>
+    </div>
+
+    <!-- Download Status Toast -->
+    <div v-if="downloadProgress.active" class="fixed top-4 right-4 z-50 bg-night-900/95 backdrop-blur-md rounded-lg p-3 shadow-xl border border-white/10 max-w-xs">
+        <div class="flex items-center gap-3">
+            <div class="w-5 h-5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin"></div>
+            <div class="flex-1">
+                <div class="text-xs font-medium">Téléchargement en cours</div>
+                <div class="text-[10px] text-slate-400 mt-1">{{ downloadProgress.message }}</div>
             </div>
-            <span class="text-xs text-slate-400">{{ downloadProgress.percent }}%</span>
-        </div>
-        <div class="h-1 bg-white/5">
-            <div class="h-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-300" 
-                 :style="{width: downloadProgress.percent + '%'}"></div>
+            <div class="text-xs font-mono text-primary-400">{{ downloadProgress.percent }}%</div>
         </div>
     </div>
 
@@ -122,11 +135,12 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <!-- Cache Status -->
-            <button @click="showCacheInfo = true" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+            <!-- Cache Status Button -->
+            <button @click="showCacheInfo = true" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors relative">
                 <svg class="w-5 h-5" :class="cacheStats.totalAyahs > 0 ? 'text-primary-400' : 'text-slate-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
+                <div v-if="cacheStats.totalAyahs > 0" class="absolute -top-1 -right-1 w-2 h-2 bg-primary-400 rounded-full"></div>
             </button>
         </div>
     </header>
@@ -162,19 +176,28 @@
                         </div>
                     </div>
 
-                    <!-- Download Button -->
-                    <div v-if="selectedSurahs.length > 0 || selectedJuz.length > 0" class="p-4 bg-primary-900/20 rounded-xl border border-primary-500/20">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs text-primary-400 font-medium">Téléchargement pour hors ligne</span>
-                            <svg v-if="hasOfflineData" class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
+                    <!-- Download Options -->
+                    <div v-if="(selectedSurahs.length > 0 || selectedJuz.length > 0) && !downloadProgress.active" 
+                         class="p-4 bg-primary-900/20 rounded-xl border border-primary-500/20">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs text-primary-400 font-medium">Téléchargement offline</span>
+                            <div class="flex items-center gap-2">
+                                <svg v-if="hasOfflineData" class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                                <span v-if="downloadEstimate.size > 0" class="text-[10px] text-slate-400">
+                                    ~{{ downloadEstimate.versets }} versets
+                                </span>
+                            </div>
                         </div>
                         <button @click="downloadSelected" 
-                            :disabled="downloadProgress.active"
-                            class="w-full py-2 bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
-                            {{ hasOfflineData ? 'Mettre à jour' : 'Télécharger' }}
+                            class="w-full py-2 bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 rounded-lg text-xs font-medium transition-colors">
+                            <span v-if="!hasOfflineData">📥 Télécharger pour offline</span>
+                            <span v-else>🔄 Mettre à jour</span>
                         </button>
+                        <div class="mt-2 text-[10px] text-slate-400 text-center">
+                            Le téléchargement continue en arrière-plan
+                        </div>
                     </div>
 
                     <!-- Settings -->
@@ -184,6 +207,7 @@
                             <select v-model="settings.reciter" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-3 py-2">
                                 <option value="ar.alafasy">Mishary Alafasy</option>
                                 <option value="ar.hudhaify">Ali Al-Hudhaify</option>
+                                <option value="ar.husary">Mahmoud Al-Husary</option>
                                 <option value="ar.minshawi">Al-Minshawi</option>
                             </select>
                         </div>
@@ -205,7 +229,7 @@
                         </div>
                         <button @click="startRevision" :disabled="poolSize === 0"
                             class="w-full py-3.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold rounded-2xl disabled:opacity-50">
-                            Commencer
+                            Commencer la révision
                         </button>
                     </div>
                 </div>
@@ -216,8 +240,8 @@
                         <input v-if="mode === 'surah'" v-model="searchQuery" type="text" 
                             placeholder="Rechercher..." 
                             class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm">
-                        <button @click="toggleAll(true)" class="px-3 py-2 text-xs bg-primary-600/20 text-primary-400 rounded-lg">Tout</button>
-                        <button @click="toggleAll(false)" class="px-3 py-2 text-xs bg-white/5 text-slate-400 rounded-lg">Rien</button>
+                        <button @click="toggleAll(true)" class="px-3 py-2 text-xs bg-primary-600/20 text-primary-400 rounded-lg hover:bg-primary-600/30">Tout</button>
+                        <button @click="toggleAll(false)" class="px-3 py-2 text-xs bg-white/5 text-slate-400 rounded-lg hover:bg-white/10">Rien</button>
                     </div>
 
                     <div class="flex-1 overflow-y-auto p-4">
@@ -235,8 +259,9 @@
                                     <div class="text-sm font-semibold truncate">{{ s.nameEn }}</div>
                                     <div class="text-xs text-slate-400">{{ s.numberOfAyahs }} versets</div>
                                 </div>
+                                <!-- Offline indicator -->
                                 <svg v-if="isSurahCached(s.number)" class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H19v-2z"/>
                                 </svg>
                             </label>
                         </div>
@@ -245,9 +270,15 @@
                         <div v-else class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-3">
                             <label v-for="j in 30" :key="j" class="cursor-pointer">
                                 <input type="checkbox" :value="j" v-model="selectedJuz" class="hidden peer">
-                                <div class="aspect-square rounded-xl border flex flex-col items-center justify-center peer-checked:bg-primary-600 peer-checked:border-primary-500 bg-white/5 border-white/10">
+                                <div class="aspect-square rounded-xl border flex flex-col items-center justify-center transition-all peer-checked:bg-primary-600 peer-checked:border-primary-500 bg-white/5 border-white/10 hover:bg-white/10 relative">
                                     <span class="text-[10px] opacity-60">JUZ</span>
                                     <span class="text-2xl font-kufi font-bold">{{ j }}</span>
+                                    <!-- Offline indicator -->
+                                    <div v-if="isJuzCached(j)" class="absolute top-2 right-2">
+                                        <svg class="w-3 h-3 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             </label>
                         </div>
@@ -263,7 +294,10 @@
                 <span v-if="reveal" class="font-kufi text-primary-400">
                     {{ getSurahName(currentKey) }} - Verset {{ getAyahNumber(currentKey) }}
                 </span>
-                <span class="bg-white/5 px-3 py-1 rounded-full">{{ sessionCount }} révisés</span>
+                <div class="flex items-center gap-2">
+                    <span v-if="!isOnline && currentData.arabic" class="bg-yellow-900/50 px-2 py-1 rounded-full text-yellow-400">📵 Offline</span>
+                    <span class="bg-white/5 px-3 py-1 rounded-full">{{ sessionCount }} révisés</span>
+                </div>
             </div>
 
             <div class="relative w-full flex-1 glass-panel rounded-3xl overflow-hidden flex flex-col">
@@ -280,12 +314,12 @@
                         <!-- Arabic Text -->
                         <div class="text-center py-8">
                             <p class="text-3xl sm:text-5xl lg:text-6xl font-quran text-white leading-[2.2]" dir="rtl">
-                                {{ currentData?.arabic }}
+                                {{ currentData?.arabic || '...' }}
                             </p>
                         </div>
 
                         <!-- Audio Player -->
-                        <div v-if="currentAudioUrl && reveal" class="w-full max-w-md mx-auto mt-6 mb-8">
+                        <div v-if="currentAudioUrl && reveal" class="w-full max-w-md mx-auto mt-6 mb-8 bg-black/20 p-2 rounded-xl border border-white/5">
                             <audio ref="audioPlayer" :src="currentAudioUrl" class="w-full" controls></audio>
                         </div>
 
@@ -310,12 +344,12 @@
                 <!-- Actions -->
                 <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-night-950 to-transparent">
                     <button v-if="!reveal" @click="revealCard" 
-                        class="w-full py-4 bg-white/10 text-white rounded-2xl">
-                        Révéler
+                        class="w-full py-4 bg-white/10 backdrop-blur-md text-white rounded-2xl border border-white/10">
+                        Révéler la suite
                     </button>
                     <button v-else @click="nextCard" 
                         class="w-full py-4 bg-primary-600 text-white font-bold rounded-2xl">
-                        Suivant →
+                        Verset suivant →
                     </button>
                 </div>
             </div>
@@ -324,40 +358,98 @@
     </main>
 
     <!-- Cache Info Modal -->
-    <div v-if="showCacheInfo" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click="showCacheInfo = false">
-        <div class="bg-night-900 rounded-2xl p-6 max-w-md w-full border border-white/10" @click.stop>
-            <h3 class="text-lg font-bold mb-4">Stockage Local</h3>
-            <div class="space-y-3 text-sm">
-                <div class="flex justify-between">
-                    <span class="text-slate-400">Versets en cache</span>
-                    <span class="font-mono">{{ cacheStats.totalAyahs }}</span>
+    <transition name="modal">
+        <div v-if="showCacheInfo" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50" @click="showCacheInfo = false">
+            <div class="bg-night-900 rounded-t-3xl sm:rounded-2xl p-6 max-w-md w-full border border-white/10 modal-enter" @click.stop>
+                <!-- Close button for mobile -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold">Stockage Local</h3>
+                    <button @click="showCacheInfo = false" class="sm:hidden p-2 -mr-2">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-400">Sourates complètes</span>
-                    <span class="font-mono">{{ cacheStats.completeSurahs }}</span>
+                
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between py-2 border-b border-white/5">
+                        <span class="text-slate-400">Versets en cache</span>
+                        <span class="font-mono text-primary-400">{{ cacheStats.totalAyahs }}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-white/5">
+                        <span class="text-slate-400">Sourates complètes</span>
+                        <span class="font-mono">{{ cacheStats.completeSurahs }}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-white/5">
+                        <span class="text-slate-400">Juz complets</span>
+                        <span class="font-mono">{{ cacheStats.completeJuz }}</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-slate-400">Espace utilisé</span>
+                        <span class="font-mono">{{ formatSize(cacheStats.sizeKB) }}</span>
+                    </div>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-400">Espace utilisé</span>
-                    <span class="font-mono">{{ cacheStats.sizeKB }} KB</span>
+                
+                <div class="mt-6 flex gap-3">
+                    <button @click="showCacheInfo = false" class="flex-1 py-2 bg-white/10 text-white rounded-lg text-sm">
+                        Fermer
+                    </button>
+                    <button @click="clearCache" class="flex-1 py-2 bg-red-600/20 text-red-400 rounded-lg text-sm hover:bg-red-600/30">
+                        Vider le cache
+                    </button>
                 </div>
             </div>
-            <button @click="clearCache" class="mt-6 w-full py-2 bg-red-600/20 text-red-400 rounded-lg text-sm">
-                Vider le cache
-            </button>
         </div>
-    </div>
+    </transition>
 
 </div>
 
 <script>
-// Service Worker Registration
+// Initialize Service Worker & Download Worker
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(console.error);
 }
 
+// Initialize Download Worker
+const downloadWorker = new Worker('download-worker.js');
+
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
-// Enhanced Storage Manager
+// JUZ_MAPPING - Mapping des Juz aux sourates et versets
+const JUZ_MAPPING = [
+    { juz: 1, start: "1:1", end: "2:141" },
+    { juz: 2, start: "2:142", end: "2:252" },
+    { juz: 3, start: "2:253", end: "3:92" },
+    { juz: 4, start: "3:93", end: "4:23" },
+    { juz: 5, start: "4:24", end: "4:147" },
+    { juz: 6, start: "4:148", end: "5:81" },
+    { juz: 7, start: "5:82", end: "6:110" },
+    { juz: 8, start: "6:111", end: "7:87" },
+    { juz: 9, start: "7:88", end: "8:40" },
+    { juz: 10, start: "8:41", end: "9:92" },
+    { juz: 11, start: "9:93", end: "11:5" },
+    { juz: 12, start: "11:6", end: "12:52" },
+    { juz: 13, start: "12:53", end: "14:52" },
+    { juz: 14, start: "15:1", end: "16:128" },
+    { juz: 15, start: "17:1", end: "18:74" },
+    { juz: 16, start: "18:75", end: "20:135" },
+    { juz: 17, start: "21:1", end: "22:78" },
+    { juz: 18, start: "23:1", end: "25:20" },
+    { juz: 19, start: "25:21", end: "27:55" },
+    { juz: 20, start: "27:56", end: "29:45" },
+    { juz: 21, start: "29:46", end: "33:30" },
+    { juz: 22, start: "33:31", end: "36:27" },
+    { juz: 23, start: "36:28", end: "39:31" },
+    { juz: 24, start: "39:32", end: "41:46" },
+    { juz: 25, start: "41:47", end: "45:37" },
+    { juz: 26, start: "46:1", end: "51:30" },
+    { juz: 27, start: "51:31", end: "57:29" },
+    { juz: 28, start: "58:1", end: "66:12" },
+    { juz: 29, start: "67:1", end: "77:50" },
+    { juz: 30, start: "78:1", end: "114:6" }
+];
+
+// Storage Manager
 class StorageManager {
     constructor() {
         this.prefix = 'murajaah_';
@@ -366,7 +458,7 @@ class StorageManager {
 
     initDB() {
         if (!localStorage.getItem(this.prefix + 'version')) {
-            localStorage.setItem(this.prefix + 'version', '1.0');
+            localStorage.setItem(this.prefix + 'version', '1.1');
         }
     }
 
@@ -397,9 +489,21 @@ class StorageManager {
         return data ? JSON.parse(data) : null;
     }
 
+    setJuzMeta(juz, meta) {
+        const key = `${this.prefix}juz_meta_${juz}`;
+        localStorage.setItem(key, JSON.stringify(meta));
+    }
+
+    getJuzMeta(juz) {
+        const key = `${this.prefix}juz_meta_${juz}`;
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    }
+
     getStats() {
         let totalAyahs = 0;
         let surahs = new Set();
+        let juzComplete = new Set();
         let totalSize = 0;
 
         for (let i = 0; i < localStorage.length; i++) {
@@ -408,14 +512,25 @@ class StorageManager {
                 totalAyahs++;
                 const surahNum = key.split('_')[2];
                 surahs.add(surahNum);
-                totalSize += (localStorage.getItem(key) || '').length;
             }
+            if (key.startsWith(this.prefix + 'juz_meta_')) {
+                const juzData = localStorage.getItem(key);
+                if (juzData) {
+                    const meta = JSON.parse(juzData);
+                    if (meta.complete) {
+                        const juzNum = key.split('_')[3];
+                        juzComplete.add(juzNum);
+                    }
+                }
+            }
+            totalSize += (localStorage.getItem(key) || '').length;
         }
 
         return {
             totalAyahs,
             completeSurahs: surahs.size,
-            sizeKB: Math.round(totalSize / 1024)
+            completeJuz: juzComplete.size,
+            sizeKB: totalSize / 1024
         };
     }
 
@@ -433,7 +548,7 @@ class StorageManager {
 
 const storage = new StorageManager();
 
-// API Manager with offline fallback
+// API Manager
 class APIManager {
     constructor() {
         this.baseURL = 'https://api.alquran.cloud/v1';
@@ -451,14 +566,17 @@ class APIManager {
     }
 
     async getAyah(surah, ayah, edition = 'quran-uthmani') {
-        // Check cache first
         const cached = storage.getAyah(surah, ayah);
         if (cached && cached.arabic) {
             return { data: cached };
         }
 
-        // Fetch from API
         const url = `${this.baseURL}/ayah/${surah}:${ayah}/${edition}`;
+        return this.fetchWithFallback(url);
+    }
+
+    async getJuz(juzNumber) {
+        const url = `${this.baseURL}/juz/${juzNumber}/quran-uthmani`;
         return this.fetchWithFallback(url);
     }
 
@@ -503,7 +621,7 @@ createApp({
         // Online/Offline
         const isOnline = ref(navigator.onLine);
         const showCacheInfo = ref(false);
-        const cacheStats = ref({ totalAyahs: 0, completeSurahs: 0, sizeKB: 0 });
+        const cacheStats = ref({ totalAyahs: 0, completeSurahs: 0, completeJuz: 0, sizeKB: 0 });
         
         // Download Progress
         const downloadProgress = ref({
@@ -514,7 +632,6 @@ createApp({
 
         // Session
         const pool = ref([]);
-        const history = ref([]);
         const sessionCount = ref(0);
         const currentKey = ref(null);
         const currentData = ref({ arabic: '', tr: '', audio: '' });
@@ -539,7 +656,23 @@ createApp({
                     return acc + (s ? s.numberOfAyahs - 1 : 0);
                 }, 0);
             }
-            return selectedJuz.value.length * 200;
+            return selectedJuz.value.length * 200; // Approximation
+        });
+
+        const downloadEstimate = computed(() => {
+            let versets = 0;
+            if (mode.value === 'surah') {
+                versets = selectedSurahs.value.reduce((acc, sNum) => {
+                    const s = surahList.value.find(x => x.number === sNum);
+                    return acc + (s ? s.numberOfAyahs : 0);
+                }, 0);
+            } else {
+                versets = selectedJuz.value.length * 200; // Approximation
+            }
+            return {
+                versets,
+                size: Math.round(versets * 2) // ~2KB par verset
+            };
         });
 
         const currentAudioUrl = computed(() => currentData.value.audio);
@@ -547,8 +680,9 @@ createApp({
         const hasOfflineData = computed(() => {
             if (mode.value === 'surah') {
                 return selectedSurahs.value.some(s => isSurahCached(s));
+            } else {
+                return selectedJuz.value.some(j => isJuzCached(j));
             }
-            return false;
         });
 
         // Methods
@@ -561,76 +695,64 @@ createApp({
             return meta && meta.complete;
         }
 
+        function isJuzCached(juzNum) {
+            const meta = storage.getJuzMeta(juzNum);
+            return meta && meta.complete;
+        }
+
+        function formatSize(kb) {
+            if (kb < 1024) return Math.round(kb) + ' KB';
+            return (kb / 1024).toFixed(1) + ' MB';
+        }
+
         async function downloadSelected() {
+            // Start background download
             downloadProgress.value = {
                 active: true,
-                message: 'Téléchargement en cours...',
+                message: 'Préparation...',
                 percent: 0
             };
 
-            try {
-                const surahs = mode.value === 'surah' ? selectedSurahs.value : [];
-                let totalAyahs = 0;
-                let downloadedAyahs = 0;
+            const downloadData = {
+                mode: mode.value,
+                surahs: mode.value === 'surah' ? selectedSurahs.value : [],
+                juz: mode.value === 'juz' ? selectedJuz.value : [],
+                settings: settings.value
+            };
 
-                // Calculate total
-                for (const sNum of surahs) {
-                    const s = surahList.value.find(x => x.number === sNum);
-                    if (s) totalAyahs += s.numberOfAyahs;
-                }
+            // Send to worker for background download
+            downloadWorker.postMessage({ 
+                action: 'download', 
+                data: downloadData 
+            });
+        }
 
-                // Download each surah
-                for (const sNum of surahs) {
-                    const s = surahList.value.find(x => x.number === sNum);
-                    if (!s) continue;
-
-                    downloadProgress.value.message = `Téléchargement: ${s.nameEn}`;
-
-                    for (let a = 1; a <= s.numberOfAyahs; a++) {
-                        try {
-                            // Arabic text
-                            const arData = await api.getAyah(sNum, a, 'quran-uthmani');
-                            
-                            // Translation if needed
-                            let trData = null;
-                            if (settings.value.translation !== 'none') {
-                                trData = await api.getAyah(sNum, a, settings.value.translation);
-                            }
-
-                            // Audio URL
-                            const audioData = await api.getAyah(sNum, a, settings.value.reciter);
-
-                            // Store in cache
-                            storage.setAyah(sNum, a, {
-                                arabic: arData.data.text || arData.data.arabic,
-                                tr: trData?.data.text || '',
-                                audio: audioData?.data.audio || ''
-                            });
-
-                            downloadedAyahs++;
-                            downloadProgress.value.percent = Math.round((downloadedAyahs / totalAyahs) * 100);
-                        } catch (e) {
-                            console.error(`Failed to download ${sNum}:${a}`, e);
-                        }
-                    }
-
-                    // Mark surah as complete
-                    storage.setSurahMeta(sNum, {
-                        complete: true,
-                        numberOfAyahs: s.numberOfAyahs,
-                        downloadDate: Date.now()
-                    });
-                }
-
+        // Listen to worker messages
+        downloadWorker.onmessage = (e) => {
+            const { type, data } = e.data;
+            
+            if (type === 'progress') {
+                downloadProgress.value = {
+                    active: true,
+                    message: data.message,
+                    percent: data.percent
+                };
+            } else if (type === 'complete') {
+                downloadProgress.value = {
+                    active: false,
+                    message: '',
+                    percent: 0
+                };
                 updateCacheStats();
-            } finally {
+            } else if (type === 'error') {
+                console.error('Download error:', data);
                 downloadProgress.value = {
                     active: false,
                     message: '',
                     percent: 0
                 };
             }
-        }
+        };
 
         function toggleAll(select) {
             if (mode.value === 'surah') {
@@ -650,6 +772,27 @@ createApp({
                     if (!meta) continue;
                     for (let i = 1; i < meta.numberOfAyahs; i++) {
                         pool.value.push(`${s}:${i}`);
+                    }
+                }
+            } else {
+                // Pour les Juz, utiliser le mapping
+                for (const juzNum of selectedJuz.value) {
+                    const juzInfo = JUZ_MAPPING[juzNum - 1];
+                    if (!juzInfo) continue;
+                    
+                    const [startSurah, startAyah] = juzInfo.start.split(':').map(Number);
+                    const [endSurah, endAyah] = juzInfo.end.split(':').map(Number);
+                    
+                    for (let s = startSurah; s <= endSurah; s++) {
+                        const surah = surahList.value.find(x => x.number === s);
+                        if (!surah) continue;
+                        
+                        const start = s === startSurah ? startAyah : 1;
+                        const end = s === endSurah ? endAyah : surah.numberOfAyahs;
+                        
+                        for (let a = start; a <= Math.min(end, surah.numberOfAyahs - 1); a++) {
+                            pool.value.push(`${s}:${a}`);
+                        }
                     }
                 }
             }
@@ -705,7 +848,7 @@ createApp({
         async function loadAyahData(surah, ayah) {
             // Try cache first
             const cached = storage.getAyah(surah, ayah);
-            if (cached) {
+            if (cached && cached.arabic) {
                 currentData.value = cached;
                 return;
             }
@@ -722,7 +865,7 @@ createApp({
 
             try {
                 const arData = await api.getAyah(surah, ayah, 'quran-uthmani');
-                currentData.value.arabic = arData.data.text;
+                currentData.value.arabic = arData.data.text || arData.data.arabic;
 
                 if (settings.value.translation !== 'none') {
                     const trData = await api.getAyah(surah, ayah, settings.value.translation);
@@ -741,6 +884,7 @@ createApp({
 
         async function revealCard() {
             reveal.value = true;
+            
             // Load next ayahs
             const [s, a] = currentKey.value.split(':').map(Number);
             const meta = surahList.value.find(x => x.number === s);
@@ -755,6 +899,23 @@ createApp({
                         arabic: cached.arabic,
                         tr: cached.tr
                     });
+                } else if (navigator.onLine) {
+                    // Try to fetch if online
+                    try {
+                        const arData = await api.getAyah(s, i, 'quran-uthmani');
+                        let tr = '';
+                        if (settings.value.translation !== 'none') {
+                            const trData = await api.getAyah(s, i, settings.value.translation);
+                            tr = trData.data.text;
+                        }
+                        nextAyahs.push({
+                            ayah: i,
+                            arabic: arData.data.text || arData.data.arabic,
+                            tr: tr
+                        });
+                    } catch (e) {
+                        console.error('Failed to load next ayah', e);
+                    }
                 }
             }
             chunkData.value = nextAyahs;
@@ -770,6 +931,12 @@ createApp({
 
         // Lifecycle
         onMounted(async () => {
+            // Load settings
+            const savedSettings = localStorage.getItem('settings');
+            if (savedSettings) {
+                settings.value = JSON.parse(savedSettings);
+            }
+
             // Load surah list
             surahList.value = await api.getSurahList();
             
@@ -800,10 +967,10 @@ createApp({
             view, mode, loading, surahList, filteredSurahs, selectedSurahs, selectedJuz,
             searchQuery, settings, poolSize, sessionCount, currentData, currentAudioUrl,
             reveal, chunkData, audioPlayer, currentKey, isOnline, showCacheInfo, cacheStats,
-            downloadProgress, hasOfflineData,
+            downloadProgress, hasOfflineData, downloadEstimate,
             toggleAll, startRevision, returnToHome, nextCard, revealCard, 
-            getSurahName, getAyahNumber, updateCacheStats, isSurahCached,
-            downloadSelected, clearCache
+            getSurahName, getAyahNumber, updateCacheStats, isSurahCached, isJuzCached,
+            downloadSelected, clearCache, formatSize
         };
     }
 }).mount('#app');
