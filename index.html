@@ -13,79 +13,198 @@
     <meta name="apple-mobile-web-app-title" content="Murajaah">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Murajaah">
-    <meta name="msapplication-TileColor" content="#10b981">
-    <meta name="msapplication-navbutton-color" content="#10b981">
     
-    <!-- PWA Manifest - CHEMIN RELATIF -->
+    <!-- PWA Manifest -->
     <link rel="manifest" href="./manifest.json">
     
-    <!-- Icons pour iOS - CHEMINS RELATIFS -->
+    <!-- Icons -->
     <link rel="apple-touch-icon" href="./icons/icon-192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="./icons/icon-167.png">
-    
-    <!-- Favicon - CHEMINS RELATIFS -->
     <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-16.png">
-    <link rel="shortcut icon" href="./icons/icon-96.png">
 
+    <!-- Fonts - avec fallback -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        kufi: ['Reem Kufi', 'sans-serif'],
-                        quran: ['Scheherazade New', 'serif'],
-                    },
-                    colors: {
-                        primary: {
-                            400: '#34d399',
-                            500: '#10b981',
-                            600: '#059669',
-                            800: '#065f46',
-                            900: '#064e3b',
-                        },
-                        night: {
-                            800: '#1e293b',
-                            900: '#0f172a',
-                            950: '#020617'
-                        }
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.6s ease-out',
-                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    },
-                    keyframes: {
-                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
+        /* ============================================
+           TAILWIND CSS - STYLES ESSENTIELS INLINE
+           Pour fonctionner en mode offline
+           ============================================ */
+        *, ::before, ::after { box-sizing: border-box; border-width: 0; border-style: solid; }
+        html { line-height: 1.5; -webkit-text-size-adjust: 100%; font-family: 'Inter', system-ui, sans-serif; }
+        body { margin: 0; line-height: inherit; }
+        h1, h2, h3, p { margin: 0; }
+        button, input, select { font-family: inherit; font-size: 100%; margin: 0; padding: 0; }
+        button { cursor: pointer; background-color: transparent; background-image: none; }
+        [hidden] { display: none; }
+        
+        /* Colors */
+        :root {
+            --primary-400: #34d399;
+            --primary-500: #10b981;
+            --primary-600: #059669;
+            --primary-800: #065f46;
+            --primary-900: #064e3b;
+            --night-800: #1e293b;
+            --night-900: #0f172a;
+            --night-950: #020617;
+        }
+        
+        /* Fonts */
+        .font-sans { font-family: 'Inter', system-ui, sans-serif; }
+        .font-kufi { font-family: 'Reem Kufi', 'Arial', sans-serif; }
+        .font-quran { font-family: 'Scheherazade New', 'Traditional Arabic', serif; }
+        
+        /* Layout */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1 1 0%; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-1 { gap: 0.25rem; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-4 { gap: 1rem; }
+        .gap-6 { gap: 1.5rem; }
+        .grid { display: grid; }
+        .hidden { display: none; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .fixed { position: fixed; }
+        .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        
+        /* Sizing */
+        .h-full { height: 100%; }
+        .h-screen { height: 100vh; }
+        .w-full { width: 100%; }
+        .max-w-5xl { max-width: 64rem; }
+        .max-w-4xl { max-width: 56rem; }
+        .max-w-3xl { max-width: 48rem; }
+        .max-w-2xl { max-width: 42rem; }
+        .max-w-lg { max-width: 32rem; }
+        .min-w-0 { min-width: 0; }
+        .shrink-0 { flex-shrink: 0; }
+        
+        /* Spacing */
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .p-6 { padding: 1.5rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+        .py-5 { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+        .pt-6 { padding-top: 1.5rem; }
+        .pb-6 { padding-bottom: 1.5rem; }
+        .pb-20 { padding-bottom: 5rem; }
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mt-6 { margin-top: 1.5rem; }
+        .mt-auto { margin-top: auto; }
+        .ml-auto { margin-left: auto; }
+        .my-auto { margin-top: auto; margin-bottom: auto; }
+        
+        /* Typography */
+        .text-xs { font-size: 0.75rem; line-height: 1rem; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-base { font-size: 1rem; line-height: 1.5rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+        .text-5xl { font-size: 3rem; line-height: 1; }
+        .text-6xl { font-size: 3.75rem; line-height: 1; }
+        .font-light { font-weight: 300; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        .uppercase { text-transform: uppercase; }
+        .italic { font-style: italic; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .leading-none { line-height: 1; }
+        .leading-relaxed { line-height: 1.625; }
+        .tracking-wide { letter-spacing: 0.025em; }
+        .tracking-widest { letter-spacing: 0.1em; }
+        
+        /* Colors */
+        .text-white { color: #fff; }
+        .text-slate-200 { color: #e2e8f0; }
+        .text-slate-300 { color: #cbd5e1; }
+        .text-slate-400 { color: #94a3b8; }
+        .text-slate-500 { color: #64748b; }
+        .text-slate-600 { color: #475569; }
+        .text-primary-400 { color: var(--primary-400); }
+        .text-primary-500 { color: var(--primary-500); }
+        .text-amber-400 { color: #fbbf24; }
+        .text-amber-500 { color: #f59e0b; }
+        .bg-night-950 { background-color: var(--night-950); }
+        .bg-night-900 { background-color: var(--night-900); }
+        .bg-primary-500 { background-color: var(--primary-500); }
+        .bg-primary-600 { background-color: var(--primary-600); }
+        
+        /* Borders */
+        .border { border-width: 1px; }
+        .border-t { border-top-width: 1px; }
+        .border-b { border-bottom-width: 1px; }
+        .rounded { border-radius: 0.25rem; }
+        .rounded-lg { border-radius: 0.5rem; }
+        .rounded-xl { border-radius: 0.75rem; }
+        .rounded-2xl { border-radius: 1rem; }
+        .rounded-3xl { border-radius: 1.5rem; }
+        .rounded-full { border-radius: 9999px; }
+        
+        /* Effects */
+        .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+        .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .opacity-50 { opacity: 0.5; }
+        .opacity-60 { opacity: 0.6; }
+        
+        /* Transitions */
+        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+        .transition-colors { transition-property: color, background-color, border-color; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+        .transition-transform { transition-property: transform; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+        .duration-200 { transition-duration: 200ms; }
+        .duration-300 { transition-duration: 300ms; }
+        
+        /* Transforms */
+        .transform { transform: translateX(var(--tw-translate-x, 0)) translateY(var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0)) skewX(var(--tw-skew-x, 0)) skewY(var(--tw-skew-y, 0)) scaleX(var(--tw-scale-x, 1)) scaleY(var(--tw-scale-y, 1)); }
+        
+        /* Cursor */
+        .cursor-pointer { cursor: pointer; }
+        .cursor-not-allowed { cursor: not-allowed; }
+        
+        /* Other */
+        .outline-none { outline: 2px solid transparent; outline-offset: 2px; }
+        .appearance-none { appearance: none; }
+        .pointer-events-none { pointer-events: none; }
+        .z-10 { z-index: 10; }
+        .z-20 { z-index: 20; }
+        .z-50 { z-index: 50; }
+        
+        /* ============================================
+           CUSTOM STYLES
+           ============================================ */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #10b981; }
 
-        .arabic-text {
-            line-height: 2.5;
-            direction: rtl;
-            font-feature-settings: "cv01" on;
-        }
         [v-cloak] { display: none; }
 
         .glass-panel {
@@ -95,13 +214,58 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
         
+        .bg-gradient-main {
+            background: radial-gradient(ellipse at top, var(--night-900), var(--night-950), var(--night-950));
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+        }
+        
+        .border-white-5 { border-color: rgba(255,255,255,0.05); }
+        .border-white-10 { border-color: rgba(255,255,255,0.1); }
+        .border-primary-30 { border-color: rgba(16, 185, 129, 0.3); }
+        .bg-white-5 { background-color: rgba(255,255,255,0.05); }
+        .bg-white-10 { background-color: rgba(255,255,255,0.1); }
+        .bg-black-20 { background-color: rgba(0,0,0,0.2); }
+        .bg-black-40 { background-color: rgba(0,0,0,0.4); }
+        .bg-primary-900-30 { background-color: rgba(6, 78, 59, 0.3); }
+        
+        /* Animations */
+        @keyframes fadeIn { 
+            0% { opacity: 0; } 
+            100% { opacity: 1; } 
+        }
+        @keyframes slideUp { 
+            0% { transform: translateY(20px); opacity: 0; } 
+            100% { transform: translateY(0); opacity: 1; } 
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.6)); }
+        }
+        
+        .animate-fade-in { animation: fadeIn 0.6s ease-out; }
+        .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-spin { animation: spin 1s linear infinite; }
+        .animate-bounce { animation: bounce 1s infinite; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
         /* Splash screen */
         .splash-screen {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
             display: flex;
             flex-direction: column;
@@ -110,28 +274,17 @@
             z-index: 9999;
             transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
         }
-        
         .splash-screen.hidden {
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
         }
+        .splash-logo { animation: pulse-glow 2s ease-in-out infinite; }
         
-        .splash-logo {
-            animation: pulse-glow 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse-glow {
-            0%, 100% { filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.3)); }
-            50% { filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.6)); }
-        }
-        
-        /* Offline indicator */
+        /* Offline banner */
         .offline-banner {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             background: linear-gradient(90deg, #f59e0b, #d97706);
             color: white;
             text-align: center;
@@ -142,17 +295,12 @@
             transform: translateY(-100%);
             transition: transform 0.3s ease;
         }
-        
-        .offline-banner.show {
-            transform: translateY(0);
-        }
+        .offline-banner.show { transform: translateY(0); }
         
         /* Install prompt */
         .install-prompt {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
+            bottom: 20px; left: 20px; right: 20px;
             max-width: 400px;
             margin: 0 auto;
             background: linear-gradient(135deg, #065f46, #064e3b);
@@ -163,64 +311,241 @@
             transform: translateY(200%);
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        .install-prompt.show { transform: translateY(0); }
         
-        .install-prompt.show {
-            transform: translateY(0);
+        /* Form elements */
+        select, input[type="text"] {
+            background-color: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            outline: none;
         }
-
-        /* Safe area pour iOS */
+        select:focus, input[type="text"]:focus {
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+        select { 
+            appearance: none; 
+            cursor: pointer;
+            padding-right: 2.5rem;
+        }
+        
+        /* Checkbox label */
+        .surah-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .surah-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.1);
+        }
+        .surah-item.selected {
+            background: rgba(6, 78, 59, 0.3);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .surah-item input { display: none; }
+        
+        .surah-number {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 700;
+            background: rgba(255,255,255,0.1);
+            color: #64748b;
+            transition: all 0.3s;
+        }
+        .surah-item.selected .surah-number {
+            background: var(--primary-500);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        /* Juz item */
+        .juz-item {
+            aspect-ratio: 1;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .juz-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .juz-item.selected {
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+            border-color: var(--primary-500);
+            color: white;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+        }
+        .juz-item input { display: none; }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+            color: white;
+            font-weight: 700;
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: scale(1.02);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-weight: 500;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.2);
+        }
+        
+        /* Grid layouts */
+        .grid-surahs {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            .grid-surahs { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .grid-surahs { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        .grid-juz {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        @media (min-width: 640px) {
+            .grid-juz { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .grid-juz { grid-template-columns: repeat(6, 1fr); }
+        }
+        
+        .grid-config {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .grid-config {
+                grid-template-columns: repeat(12, 1fr);
+                grid-template-rows: min-content 1fr;
+            }
+        }
+        
+        /* Arabic text */
+        .arabic-text {
+            direction: rtl;
+            line-height: 2.2;
+            font-feature-settings: "cv01" on;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary-500);
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Safe area */
         @supports (padding: max(0px)) {
             body {
                 padding-top: env(safe-area-inset-top);
                 padding-bottom: env(safe-area-inset-bottom);
-                padding-left: env(safe-area-inset-left);
-                padding-right: env(safe-area-inset-right);
             }
+        }
+        
+        /* Media queries pour le responsive */
+        @media (min-width: 640px) {
+            .sm\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+            .sm\:p-12 { padding: 3rem; }
+            .sm\:text-5xl { font-size: 3rem; }
+            .sm\:text-lg { font-size: 1.125rem; }
+            .sm\:text-4xl { font-size: 2.25rem; }
+        }
+        @media (min-width: 768px) {
+            .md\:col-span-4 { grid-column: span 4 / span 4; }
+            .md\:col-span-8 { grid-column: span 8 / span 8; }
+            .md\:row-span-2 { grid-row: span 2 / span 2; }
+            .md\:flex { display: flex; }
+            .md\:h-auto { height: auto; }
+            .md\:overflow-hidden { overflow: hidden; }
+            .md\:text-6xl { font-size: 3.75rem; }
+        }
+        @media (min-width: 1024px) {
+            .lg\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+            .lg\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+            .lg\:p-6 { padding: 1.5rem; }
         }
     </style>
 </head>
-<body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans selection:bg-primary-500 selection:text-white">
+<body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans">
 
 <!-- Splash Screen -->
 <div id="splash" class="splash-screen">
     <div class="splash-logo mb-6">
         <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Outer decorative ring -->
             <circle cx="60" cy="60" r="56" stroke="url(#gradient1)" stroke-width="2" opacity="0.3"/>
             <circle cx="60" cy="60" r="48" stroke="url(#gradient1)" stroke-width="1" opacity="0.2"/>
-            
-            <!-- Main background circle -->
             <circle cx="60" cy="60" r="44" fill="url(#gradient2)"/>
-            
-            <!-- Islamic geometric pattern -->
             <path d="M60 20L65 30L60 25L55 30L60 20Z" fill="white" fill-opacity="0.9"/>
             <path d="M60 100L55 90L60 95L65 90L60 100Z" fill="white" fill-opacity="0.9"/>
             <path d="M20 60L30 55L25 60L30 65L20 60Z" fill="white" fill-opacity="0.9"/>
             <path d="M100 60L90 65L95 60L90 55L100 60Z" fill="white" fill-opacity="0.9"/>
-            
-            <!-- Central book/quran symbol -->
             <rect x="40" y="42" width="40" height="36" rx="3" fill="white" fill-opacity="0.15" stroke="white" stroke-width="1.5"/>
             <line x1="60" y1="42" x2="60" y2="78" stroke="white" stroke-width="1.5"/>
-            
-            <!-- Book pages lines -->
             <line x1="45" y1="50" x2="55" y2="50" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="45" y1="55" x2="55" y2="55" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="45" y1="60" x2="55" y2="60" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="45" y1="65" x2="55" y2="65" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="45" y1="70" x2="55" y2="70" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
-            
             <line x1="65" y1="50" x2="75" y2="50" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="65" y1="55" x2="75" y2="55" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="65" y1="60" x2="75" y2="60" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="65" y1="65" x2="75" y2="65" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
             <line x1="65" y1="70" x2="75" y2="70" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
-            
-            <!-- Decorative crescents -->
-            <path d="M30 35 A12 12 0 0 1 35 30" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
-            <path d="M90 35 A12 12 0 0 0 85 30" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
-            <path d="M30 85 A12 12 0 0 0 35 90" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
-            <path d="M90 85 A12 12 0 0 1 85 90" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
-            
             <defs>
                 <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#10b981"/>
@@ -249,20 +574,20 @@
 
 <!-- Install Prompt -->
 <div id="installPrompt" class="install-prompt">
-    <div class="flex items-start gap-4">
-        <div class="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center shrink-0">
+    <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-primary-500 bg-opacity-20 flex items-center justify-center shrink-0">
             <svg class="w-6 h-6 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
         </div>
         <div class="flex-1">
             <h3 class="text-white font-semibold mb-1">Installer Murajaah</h3>
-            <p class="text-slate-300 text-sm mb-3">Ajoutez l'application à votre écran d'accueil pour un accès rapide, même hors ligne.</p>
+            <p class="text-slate-300 text-sm mb-3">Accès rapide, même hors ligne.</p>
             <div class="flex gap-2">
-                <button id="installBtn" class="flex-1 bg-primary-500 hover:bg-primary-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                <button id="installBtn" class="flex-1 bg-primary-500 text-white font-semibold py-2 px-4 rounded-lg">
                     Installer
                 </button>
-                <button id="dismissInstall" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">
+                <button id="dismissInstall" class="px-4 py-2 text-slate-400">
                     Plus tard
                 </button>
             </div>
@@ -270,16 +595,16 @@
     </div>
 </div>
 
-<div id="app" v-cloak class="h-full flex flex-col relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-night-900 via-night-950 to-night-950">
+<!-- Main App -->
+<div id="app" class="h-full flex flex-col relative bg-gradient-main">
 
-    <header class="flex justify-between items-center px-6 py-5 border-b border-white/5 bg-night-950/50 backdrop-blur-md z-20 shrink-0">
-        <div class="flex items-center gap-4 cursor-pointer group" @click="returnToHome">
-            <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-900 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.25)] border border-white/10 group-hover:scale-105 transition-transform duration-300">
-                <div class="absolute inset-0 rounded-2xl bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <!-- Logo inline SVG -->
+    <!-- Header -->
+    <header class="flex justify-between items-center px-6 py-5 border-b border-white-5 bg-night-950 bg-opacity-50 z-20 shrink-0" style="backdrop-filter: blur(12px);">
+        <div class="flex items-center gap-4 cursor-pointer" @click="returnToHome">
+            <div class="relative w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center border border-white-10" style="box-shadow: 0 0 20px rgba(16,185,129,0.25);">
                 <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
-                    <rect x="4" y="5" width="16" height="14" rx="1" stroke-width="1.5"/>
-                    <line x1="12" y1="5" x2="12" y2="19" stroke-width="1.5"/>
+                    <rect x="4" y="5" width="16" height="14" rx="1"/>
+                    <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="6" y1="8" x2="10" y2="8" stroke-opacity="0.7"/>
                     <line x1="6" y1="11" x2="10" y2="11" stroke-opacity="0.7"/>
                     <line x1="6" y1="14" x2="10" y2="14" stroke-opacity="0.7"/>
@@ -289,123 +614,130 @@
                 </svg>
             </div>
             <div class="flex flex-col">
-                <h1 class="text-2xl font-kufi font-bold tracking-wide text-primary-400 leading-none group-hover:text-primary-300 transition-colors">Murajaah</h1>
-                <span class="text-[10px] text-white/70 font-medium tracking-[0.2em] uppercase mt-0.5">RÉVISION</span>
+                <h1 class="text-2xl font-kufi font-bold text-primary-400 leading-none">Murajaah</h1>
+                <span class="text-xs text-slate-500 font-medium tracking-widest uppercase mt-1">RÉVISION</span>
             </div>
         </div>
 
         <div class="flex items-center gap-3">
-            <!-- Offline indicator -->
-            <div v-if="isOffline" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30">
+            <div v-if="isOffline" class="flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500" style="background: rgba(245, 158, 11, 0.2);">
                 <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
                 <span class="text-xs text-amber-400 font-medium">Hors ligne</span>
-            </div>
-            
-            <div v-if="view === 'card'" class="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 text-xs text-slate-400 font-medium">
-                <span class="opacity-60">Raccourcis :</span>
-                <kbd class="bg-white/10 px-2 py-0.5 rounded text-slate-200 border border-white/10">Espace</kbd>
-                <kbd class="bg-white/10 px-2 py-0.5 rounded text-slate-200 border border-white/10">→</kbd>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 relative overflow-y-auto md:overflow-hidden flex flex-col items-center justify-center p-4 lg:p-6">
+    <!-- Main Content -->
+    <main class="flex-1 relative overflow-y-auto flex flex-col items-center justify-center p-4 lg:p-6">
 
+        <!-- Configuration View -->
         <div v-if="view === 'config'" class="w-full max-w-5xl h-full flex flex-col animate-fade-in">
-            <div class="text-center mb-10 mt-6 shrink-0">
-                <h2 class="text-4xl font-kufi text-white mb-3">Configurez votre Révision</h2>
-                <p class="text-slate-400 font-light text-lg">Sélectionnez les parties du Noble Coran à réviser.</p>
+            <div class="text-center mb-6 mt-4 shrink-0">
+                <h2 class="text-3xl font-kufi text-white mb-2">Configurez votre Révision</h2>
+                <p class="text-slate-400 font-light">Sélectionnez les parties du Noble Coran à réviser.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-12 md:grid-rows-[min-content_1fr] gap-6 h-auto md:h-full min-h-0 pb-6">
-                <div class="md:col-span-4 order-1 p-6 rounded-3xl glass-panel h-fit">
+            <div class="grid-config h-full min-h-0 pb-6">
+                
+                <!-- Mode Selection -->
+                <div class="md:col-span-4 p-6 rounded-3xl glass-panel" style="height: fit-content;">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Mode</label>
-                    <div class="flex bg-black/40 p-1.5 rounded-xl">
-                        <button @click="mode = 'surah'" :class="{'bg-primary-600 text-white shadow-lg': mode === 'surah', 'text-slate-400 hover:text-white': mode !== 'surah'}" class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-300">Sourate</button>
-                        <button @click="mode = 'juz'" :class="{'bg-primary-600 text-white shadow-lg': mode === 'juz', 'text-slate-400 hover:text-white': mode !== 'juz'}" class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-300">Juz</button>
+                    <div class="flex bg-black-40 p-1 rounded-xl">
+                        <button @click="mode = 'surah'" 
+                            :class="mode === 'surah' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400'"
+                            class="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-300">
+                            Sourate
+                        </button>
+                        <button @click="mode = 'juz'" 
+                            :class="mode === 'juz' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400'"
+                            class="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-300">
+                            Juz
+                        </button>
                     </div>
                 </div>
 
-                <div class="md:col-span-8 md:row-span-2 order-2 glass-panel rounded-3xl flex flex-col overflow-hidden h-[55vh] md:h-auto">
-                    <div class="p-5 border-b border-white/5 flex gap-3 items-center sticky top-0 bg-night-900/80 backdrop-blur-md z-10">
+                <!-- Surah/Juz Selection -->
+                <div class="md:col-span-8 md:row-span-2 glass-panel rounded-3xl flex flex-col overflow-hidden" style="height: 55vh; min-height: 300px;">
+                    <div class="p-4 border-b border-white-5 flex gap-3 items-center bg-night-900 bg-opacity-80" style="backdrop-filter: blur(12px);">
                         <div class="relative flex-1">
-                            <svg class="absolute left-3 top-2.5 w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            <input v-if="mode === 'surah'" v-model="searchQuery" type="text" placeholder="Rechercher une sourate..." class="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:border-primary-500/50 outline-none text-white transition-colors">
+                            <svg class="absolute left-3 top-2.5 w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input v-if="mode === 'surah'" v-model="searchQuery" type="text" placeholder="Rechercher une sourate..." 
+                                style="padding-left: 2.5rem;">
                         </div>
-                        <div class="flex bg-black/40 rounded-lg p-1 border border-white/5">
-                            <button @click="toggleAll(true)" class="px-3 py-1.5 text-xs font-semibold rounded hover:bg-white/5 text-primary-400 transition-colors">Tout</button>
-                            <div class="w-px bg-white/10 my-1"></div>
-                            <button @click="toggleAll(false)" class="px-3 py-1.5 text-xs font-semibold rounded hover:bg-white/5 text-slate-400 hover:text-white transition-colors">Rien</button>
+                        <div class="flex bg-black-40 rounded-lg p-1 border border-white-5">
+                            <button @click="toggleAll(true)" class="px-3 py-1 text-xs font-semibold text-primary-400">Tout</button>
+                            <div style="width: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
+                            <button @click="toggleAll(false)" class="px-3 py-1 text-xs font-semibold text-slate-400">Rien</button>
                         </div>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto p-5 custom-scrollbar bg-black/20">
-                        <div v-if="mode === 'surah'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            <label v-for="s in filteredSurahs" :key="s.number" class="group relative flex items-center gap-4 p-3.5 rounded-2xl border transition-all cursor-pointer duration-200"
-                                :class="selectedSurahs.includes(s.number) ? 'bg-primary-900/30 border-primary-500/30' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'">
-                                <input type="checkbox" :value="s.number" v-model="selectedSurahs" class="hidden">
-                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 font-kufi"
-                                     :class="selectedSurahs.includes(s.number) ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-white/10 text-slate-500 group-hover:bg-white/20'">
-                                    {{ s.number }}
+                    <div class="flex-1 overflow-y-auto p-4 bg-black-20">
+                        <!-- Surahs -->
+                        <div v-if="mode === 'surah'" class="grid-surahs">
+                            <label v-for="s in filteredSurahs" :key="s.number" 
+                                class="surah-item" :class="{ selected: selectedSurahs.includes(s.number) }">
+                                <input type="checkbox" :value="s.number" v-model="selectedSurahs">
+                                <div class="surah-number font-kufi">{{ s.number }}</div>
+                                <div class="flex flex-col min-w-0 flex-1">
+                                    <span class="text-sm font-semibold truncate text-slate-200">{{ s.nameEn }}</span>
+                                    <span class="text-xs font-quran text-slate-400 text-right" dir="rtl">{{ s.nameAr }}</span>
                                 </div>
-                                <div class="flex flex-col min-w-0">
-                                    <span class="text-sm font-semibold truncate" :class="selectedSurahs.includes(s.number) ? 'text-white' : 'text-slate-200'">{{ s.nameEn }}</span>
-                                    <span class="text-xs font-quran text-slate-400 group-hover:text-primary-400 transition-colors text-right" dir="rtl">{{ s.nameAr }}</span>
-                                </div>
-                                <div class="ml-auto" v-if="selectedSurahs.includes(s.number)">
-                                    <svg class="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                </div>
+                                <svg v-if="selectedSurahs.includes(s.number)" class="w-5 h-5 text-primary-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
                             </label>
                         </div>
 
-                        <div v-else class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-                            <label v-for="j in 30" :key="j" class="cursor-pointer group">
-                                <input type="checkbox" :value="j" v-model="selectedJuz" class="hidden peer">
-                                <div class="aspect-square rounded-2xl border border-white/10 bg-white/5 flex flex-col items-center justify-center hover:bg-white/10 peer-checked:bg-gradient-to-br peer-checked:from-primary-600 peer-checked:to-primary-800 peer-checked:border-primary-500 peer-checked:text-white peer-checked:shadow-xl peer-checked:shadow-primary-500/20 transition-all duration-300">
-                                    <span class="text-[10px] uppercase tracking-widest opacity-60 font-medium mb-1 group-hover:text-primary-200">Juz</span>
-                                    <span class="text-3xl font-kufi font-bold">{{ j }}</span>
-                                </div>
+                        <!-- Juz -->
+                        <div v-else class="grid-juz">
+                            <label v-for="j in 30" :key="j" class="juz-item" :class="{ selected: selectedJuz.includes(j) }">
+                                <input type="checkbox" :value="j" v-model="selectedJuz">
+                                <span class="text-xs uppercase tracking-widest opacity-60 font-medium mb-1">Juz</span>
+                                <span class="text-3xl font-kufi font-bold">{{ j }}</span>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="md:col-span-4 order-3 p-6 rounded-3xl glass-panel flex flex-col gap-6">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-2 font-medium">Récitateur</label>
-                            <div class="relative">
-                                <select v-model="settings.reciter" @change="saveSettings" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-4 py-3 outline-none focus:border-primary-500/50 text-slate-200 appearance-none cursor-pointer hover:bg-black/50 transition-colors">
-                                    <option value="ar.alafasy">Mishary Alafasy</option>
-                                    <option value="ar.husary">Mahmoud Al-Husary</option>
-                                    <option value="ar.hudhaify">Ali Al-Hudhaify</option>
-                                    <option value="ar.minshawi">Al-Minshawi</option>
-                                    <option value="ar.abdulbasitmurattal">Abdul Basit</option>
-                                    <option value="ar.mahermuaiqly">Maher Al Muaiqly</option>
-                                    <option value="ar.muhammadjibreel">Muhammad Jibreel</option>
-                                    <option value="ar.saoodshuraym">Shuraym</option>
-                                </select>
-                                <div class="absolute right-3 top-3.5 pointer-events-none text-slate-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
+                <!-- Settings -->
+                <div class="md:col-span-4 p-6 rounded-3xl glass-panel flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-2 font-medium">Récitateur</label>
+                        <div class="relative">
+                            <select v-model="settings.reciter" @change="saveSettings">
+                                <option value="ar.alafasy">Mishary Alafasy</option>
+                                <option value="ar.husary">Mahmoud Al-Husary</option>
+                                <option value="ar.hudhaify">Ali Al-Hudhaify</option>
+                                <option value="ar.minshawi">Al-Minshawi</option>
+                                <option value="ar.abdulbasitmurattal">Abdul Basit</option>
+                                <option value="ar.mahermuaiqly">Maher Al Muaiqly</option>
+                            </select>
+                            <div class="absolute right-3 top-3 pointer-events-none text-slate-500">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-2 font-medium">Traduction</label>
-                            <div class="relative">
-                                <select v-model="settings.translation" @change="saveSettings" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-4 py-3 outline-none focus:border-primary-500/50 text-slate-200 appearance-none cursor-pointer hover:bg-black/50 transition-colors">
-                                    <option value="none">Aucune (Arabe seul)</option>
-                                    <option value="fr.hamidullah">Français</option>
-                                    <option value="en.sahih">English</option>
-                                </select>
-                                <div class="absolute right-3 top-3.5 pointer-events-none text-slate-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-2 font-medium">Traduction</label>
+                        <div class="relative">
+                            <select v-model="settings.translation" @change="saveSettings">
+                                <option value="none">Aucune (Arabe seul)</option>
+                                <option value="fr.hamidullah">Français</option>
+                                <option value="en.sahih">English</option>
+                            </select>
+                            <div class="absolute right-3 top-3 pointer-events-none text-slate-500">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-auto pt-6 border-t border-white/5">
+                    <div class="mt-auto pt-4 border-t border-white-5">
                         <div class="flex items-center justify-between mb-4 px-2">
                             <span class="text-xs text-slate-400">Total sélectionné</span>
                             <div class="flex items-baseline gap-1">
@@ -413,8 +745,7 @@
                                 <span class="text-xs text-primary-400">versets</span>
                             </div>
                         </div>
-                        <button @click="startRevision" :disabled="poolSize === 0"
-                            class="w-full py-4 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold rounded-2xl shadow-lg shadow-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                        <button @click="startRevision" :disabled="poolSize === 0" class="btn-primary">
                             Commencer
                         </button>
                     </div>
@@ -423,36 +754,34 @@
             </div>
         </div>
 
-        <div v-else-if="view === 'card'" class="w-full max-w-4xl flex flex-col items-center h-full max-h-[85vh]">
+        <!-- Card View -->
+        <div v-else-if="view === 'card'" class="w-full max-w-4xl flex flex-col items-center h-full" style="max-height: 85vh;">
 
             <div class="w-full flex justify-between items-center text-xs text-slate-500 px-4 mb-3">
                 <span v-if="reveal" class="font-kufi text-primary-400 animate-fade-in">
                     Sourate {{ getSurahName(currentKey) }} - Verset {{ getAyahNumber(currentKey) }}
                 </span>
                 <span v-else></span>
-                <span class="bg-white/5 px-3 py-1 rounded-full border border-white/5">{{ sessionCount }} versets révisés</span>
+                <span class="bg-white-5 px-3 py-1 rounded-full border border-white-5">{{ sessionCount }} versets révisés</span>
             </div>
 
-            <div class="relative w-full flex-1 glass-panel rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl transition-all duration-700"
-                 :class="reveal ? 'shadow-primary-900/20' : ''">
+            <div class="relative w-full flex-1 glass-panel overflow-hidden flex flex-col shadow-2xl" style="border-radius: 2.5rem;">
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-12 flex flex-col items-center relative">
+                <div class="flex-1 overflow-y-auto p-6 sm:p-12 flex flex-col items-center relative">
 
-                    <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-50 bg-night-950/60 backdrop-blur-sm transition-opacity">
-                        <div class="relative">
-                            <div class="w-16 h-16 rounded-full border-4 border-white/10"></div>
-                            <div class="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-t-primary-500 animate-spin"></div>
-                        </div>
+                    <!-- Loading -->
+                    <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-50 bg-night-950" style="background: rgba(2, 6, 23, 0.6); backdrop-filter: blur(8px);">
+                        <div class="spinner"></div>
                     </div>
 
                     <div class="w-full max-w-3xl my-auto animate-slide-up flex flex-col items-center">
 
+                        <!-- Current Verse -->
                         <div class="w-full text-center relative py-8">
-                             <span class="absolute top-0 left-0 text-6xl text-white/5 font-serif">"</span>
-                             <span class="absolute bottom-0 right-0 text-6xl text-white/5 font-serif">"</span>
-
-                            <p class="text-4xl sm:text-5xl md:text-6xl font-quran text-white leading-[2.2] tracking-wide filter drop-shadow-lg" dir="rtl">
-                                {{ currentData?.arabic }}
+                            <span class="absolute top-0 left-0 text-6xl text-white opacity-5 font-serif">"</span>
+                            <span class="absolute bottom-0 right-0 text-6xl text-white opacity-5 font-serif">"</span>
+                            <p class="text-4xl sm:text-5xl md:text-6xl font-quran text-white arabic-text" dir="rtl" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+                                {{ currentData.arabic }}
                             </p>
                         </div>
 
@@ -462,35 +791,36 @@
                                @ended="audioEnded">
                         </audio>
 
-                        <div v-if="reveal" class="w-full animate-fade-in space-y-8 mt-4 pb-20">
+                        <!-- Revealed Content -->
+                        <div v-if="reveal" class="w-full animate-fade-in mt-4 pb-20" style="display: flex; flex-direction: column; gap: 2rem;">
 
-                            <div v-if="currentData.tr" class="text-center mx-auto max-w-2xl">
+                            <!-- Translation -->
+                            <div v-if="currentData.tr" class="text-center max-w-2xl mx-auto">
                                 <p class="text-base sm:text-lg text-slate-300 font-light leading-relaxed italic">
-                                     {{ currentData.tr }}
+                                    {{ currentData.tr }}
                                 </p>
-                                <div class="w-16 h-1 bg-primary-500/30 mx-auto mt-6 rounded-full"></div>
+                                <div class="w-16 h-1 mx-auto mt-6 rounded-full" style="background: rgba(16, 185, 129, 0.3);"></div>
                             </div>
 
-                            <div v-if="chunkData.length" class="space-y-4 w-full">
+                            <!-- Next Verses -->
+                            <div v-if="chunkData.length" class="w-full" style="display: flex; flex-direction: column; gap: 1rem;">
                                 <div class="flex items-center gap-4 py-2">
-                                     <span class="text-xs font-bold text-primary-400 uppercase tracking-widest">La suite</span>
-                                    <div class="h-px bg-white/10 flex-1"></div>
+                                    <span class="text-xs font-bold text-primary-400 uppercase tracking-widest">La suite</span>
+                                    <div class="flex-1" style="height: 1px; background: rgba(255,255,255,0.1);"></div>
                                 </div>
 
-                                <div class="grid gap-4">
-                                    <div v-for="c in chunkData"
-                                        :key="c.ayah"
-                                        class="bg-black/20 hover:bg-black/30 border border-white/5 hover:border-primary-500/20 rounded-2xl p-6 transition-colors duration-300 group"
-                                    >
-                                        <div class="flex justify-between items-start gap-4">
-                                            <div class="mt-1 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-mono text-slate-500">
+                                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                    <div v-for="c in chunkData" :key="c.ayah"
+                                        class="bg-black-20 border border-white-5 rounded-2xl p-6 transition-colors duration-300">
+                                        <div class="flex gap-4" style="justify-content: space-between; align-items: flex-start;">
+                                            <div class="w-8 h-8 rounded-full bg-white-5 flex items-center justify-center text-xs text-slate-500 shrink-0" style="margin-top: 0.25rem;">
                                                 {{ c.ayah }}
                                             </div>
                                             <div class="flex-1 text-right">
-                                                <p class="font-quran text-3xl sm:text-4xl text-white leading-[2.4] mb-3 group-hover:text-primary-100 transition-colors" dir="rtl">
+                                                <p class="font-quran text-3xl sm:text-4xl text-white arabic-text mb-3" dir="rtl" style="line-height: 2.4;">
                                                     {{ c.arabic }}
                                                 </p>
-                                                <p v-if="c.tr" class="text-sm text-slate-400 font-light text-left leading-relaxed border-t border-white/5 pt-3 mt-2">
+                                                <p v-if="c.tr" class="text-sm text-slate-400 font-light text-left leading-relaxed border-t border-white-5 pt-3 mt-2">
                                                     {{ c.tr }}
                                                 </p>
                                             </div>
@@ -499,46 +829,49 @@
                                 </div>
 
                                 <div class="flex justify-center pt-4">
-                                     <button v-if="hasMoreChunk" @click="loadNextChunk"
-                                        class="text-xs flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors">
+                                    <button v-if="hasMoreChunk" @click="loadNextChunk"
+                                        class="text-xs flex items-center gap-2 text-primary-400 cursor-pointer" style="background: none; border: none;">
                                         <span>Charger la suite</span>
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="h-24"></div>
+                        <div style="height: 6rem;"></div>
                     </div>
                 </div>
 
-                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-night-950 via-night-950/95 to-transparent z-10 flex justify-center">
+                <!-- Bottom Actions -->
+                <div class="absolute bottom-0 left-0 right-0 p-6 z-10 flex justify-center" style="background: linear-gradient(to top, var(--night-950), rgba(2,6,23,0.95), transparent);">
                     <div class="w-full max-w-lg flex items-stretch gap-3">
 
+                        <!-- Audio Button -->
                         <button v-if="currentAudioUrl" @click="toggleAudio"
-                            class="shrink-0 w-16 rounded-2xl flex items-center justify-center transition-all shadow-lg border border-white/10 group focus:outline-none"
-                            :class="isPlaying ? 'bg-primary-500 text-white shadow-primary-500/30' : 'bg-white/10 backdrop-blur-md text-primary-400 hover:bg-white/20 hover:border-white/20'">
-
-                            <svg v-if="!isPlaying" class="w-8 h-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
+                            class="shrink-0 w-16 rounded-2xl flex items-center justify-center transition-all shadow-lg border border-white-10"
+                            :style="isPlaying ? 'background: var(--primary-500); color: white;' : 'background: rgba(255,255,255,0.1); color: var(--primary-400);'">
+                            <svg v-if="!isPlaying" class="w-8 h-8" style="margin-left: 4px;" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
                             </svg>
                             <svg v-else class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                             </svg>
                         </button>
 
-                        <div class="flex-1 animate-fade-in">
-                            <button v-if="reveal" @click="nextCard"
-                                class="w-full h-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/20 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                        <!-- Main Action Button -->
+                        <div class="flex-1">
+                            <button v-if="reveal" @click="nextCard" class="btn-primary flex items-center justify-center gap-3">
                                 <span>Verset Suivant</span>
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                </svg>
                             </button>
-
-                            <button v-else @click="revealCard"
-                                class="w-full h-full bg-white/10 hover:bg-white/15 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 transition-all hover:border-white/20 flex flex-col items-center justify-center group">
+                            <button v-else @click="revealCard" class="btn-secondary flex flex-col items-center justify-center">
                                 <span class="text-sm font-bold tracking-widest uppercase mb-1">Révéler la suite</span>
-                                <svg class="w-4 h-4 text-slate-400 group-hover:translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
                         </div>
@@ -551,559 +884,36 @@
 
     </main>
 
-    <footer class="py-4 text-center text-[10px] text-slate-600 font-medium tracking-wide shrink-0">
-            MURAJAAH v1.0 &bull; Données AlQuran.cloud <span v-if="cacheSize">&bull; Cache: {{ cacheSize }}</span>
+    <!-- Footer -->
+    <footer class="py-4 text-center text-xs text-slate-600 font-medium shrink-0">
+        MURAJAAH v1.1 • Données AlQuran.cloud
+        <span v-if="cacheSize"> • Cache: {{ cacheSize }}</span>
     </footer>
 
 </div>
 
+<!-- Vue.js (version de production) -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
 <script>
-    // ==========================================
-    // SERVICE WORKER REGISTRATION
-    // ==========================================
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-            try {
-                // Utiliser un chemin relatif pour le SW
-                const registration = await navigator.serviceWorker.register('./sw.js', {
-                    scope: './'
+// ==========================================
+// SERVICE WORKER REGISTRATION
+// ==========================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+            console.log('✅ Service Worker enregistré:', registration.scope);
+            
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        if (confirm('Nouvelle version disponible. Recharger ?')) {
+                            newWorker.postMessage('skipWaiting');
+                            window.location.reload();
+                        }
+                    }
                 });
-                
-                console.log('✅ Service Worker enregistré:', registration.scope);
-                
-                // Vérifier les mises à jour
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    console.log('🔄 Nouveau Service Worker en installation...');
-                    
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // Nouvelle version disponible
-                            console.log('📦 Nouvelle version disponible');
-                            if (confirm('Une nouvelle version de Murajaah est disponible. Recharger maintenant ?')) {
-                                newWorker.postMessage('skipWaiting');
-                                window.location.reload();
-                            }
-                        }
-                    });
-                });
-                
-            } catch (error) {
-                console.error('❌ Erreur Service Worker:', error);
-            }
-        });
-        
-        // Recharger quand le SW prend le contrôle
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('🔄 Nouveau Service Worker actif, rechargement...');
-            window.location.reload();
-        });
-    }
-
-    // ==========================================
-    // PWA INSTALL PROMPT
-    // ==========================================
-    let deferredPrompt = null;
-    const installPrompt = document.getElementById('installPrompt');
-    const installBtn = document.getElementById('installBtn');
-    const dismissInstall = document.getElementById('dismissInstall');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        console.log('📱 Install prompt disponible');
-        e.preventDefault();
-        deferredPrompt = e;
-        
-        // Vérifier si déjà rejeté récemment (24h)
-        const dismissed = localStorage.getItem('installDismissed');
-        if (dismissed && Date.now() - parseInt(dismissed) < 24 * 60 * 60 * 1000) {
-            return;
-        }
-        
-        // Afficher le prompt après 3 secondes
-        setTimeout(() => {
-            if (deferredPrompt) {
-                installPrompt.classList.add('show');
-            }
-        }, 3000);
-    });
-
-    installBtn?.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        
-        installPrompt.classList.remove('show');
-        deferredPrompt.prompt();
-        
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log('📱 Installation:', outcome);
-        
-        deferredPrompt = null;
-    });
-
-    dismissInstall?.addEventListener('click', () => {
-        installPrompt.classList.remove('show');
-        localStorage.setItem('installDismissed', Date.now().toString());
-    });
-
-    // Détecter si l'app est installée
-    window.addEventListener('appinstalled', () => {
-        console.log('✅ Application installée');
-        installPrompt.classList.remove('show');
-        deferredPrompt = null;
-    });
-
-    // ==========================================
-    // OFFLINE DETECTION
-    // ==========================================
-    const offlineBanner = document.getElementById('offlineBanner');
-    
-    function updateOnlineStatus() {
-        if (!navigator.onLine) {
-            offlineBanner.classList.add('show');
-            console.log('📴 Hors ligne');
-        } else {
-            offlineBanner.classList.remove('show');
-            console.log('📶 En ligne');
-        }
-    }
-
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
-
-    // ==========================================
-    // HIDE SPLASH SCREEN
-    // ==========================================
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            document.getElementById('splash').classList.add('hidden');
-        }, 1500);
-    });
-
-    // ==========================================
-    // VUE.JS APPLICATION
-    // ==========================================
-    const { createApp, ref, computed, onMounted, watch } = Vue;
-    
-    const API = {
-        alquran: {
-            surahList: 'https://api.alquran.cloud/v1/surah',
-            juz: (n) => `https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`,
-            ayahAr: (s, a) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani`,
-            ayahTr: (s, a, ed) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`,
-            ayahAudio: (s, a, ed) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`
-        }
-    };
-
-    const PROXIES = [
-        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        (url) => `https://thingproxy.freeboard.io/fetch/${url}`
-    ];
-
-    // ==========================================
-    // CACHE UTILITY FUNCTIONS
-    // ==========================================
-    const CACHE_PREFIX = 'murajaah_';
-    const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 jours
-
-    function getCached(key) {
-        try {
-            const item = localStorage.getItem(CACHE_PREFIX + key);
-            if (!item) return null;
-            const { data, timestamp } = JSON.parse(item);
-            if (Date.now() - timestamp > CACHE_EXPIRY) {
-                localStorage.removeItem(CACHE_PREFIX + key);
-                return null;
-            }
-            return data;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function setCache(key, data) {
-        try {
-            localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
-                data,
-                timestamp: Date.now()
-            }));
-        } catch (e) {
-            // LocalStorage plein, nettoyer les anciens éléments
-            clearOldCache();
-            try {
-                localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
-                    data,
-                    timestamp: Date.now()
-                }));
-            } catch (e2) {
-                console.warn('Cache storage full');
-            }
-        }
-    }
-
-    function clearOldCache() {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        const items = keys.map(k => {
-            try {
-                return {
-                    key: k,
-                    timestamp: JSON.parse(localStorage.getItem(k))?.timestamp || 0
-                };
-            } catch {
-                return { key: k, timestamp: 0 };
-            }
-        }).sort((a, b) => a.timestamp - b.timestamp);
-        
-        // Supprimer les 20% les plus anciens
-        const toRemove = Math.ceil(items.length * 0.2);
-        items.slice(0, toRemove).forEach(item => localStorage.removeItem(item.key));
-    }
-
-    async function fetchSafe(url) {
-        const cacheKey = btoa(url).slice(0, 50);
-        const cached = getCached(cacheKey);
-        if (cached) return cached;
-
-        try {
-            const r = await fetch(url);
-            if (r.ok) {
-                const data = await r.json();
-                setCache(cacheKey, data);
-                return data;
-            }
-            throw new Error('Direct fail');
-        } catch (e) {
-            // Essayer les proxies si la requête directe échoue
-            for (const wrap of PROXIES) {
-                try {
-                    const r = await fetch(wrap(url));
-                    if (r.ok) {
-                        const data = await r.json();
-                        setCache(cacheKey, data);
-                        return data;
-                    }
-                } catch (_) {}
-            }
-            
-            // Si tout échoue, vérifier le cache même expiré
-            const expiredItem = localStorage.getItem(CACHE_PREFIX + cacheKey);
-            if (expiredItem) {
-                try {
-                    return JSON.parse(expiredItem).data;
-                } catch {}
-            }
-            
-            throw e;
-        }
-    }
-
-    // ==========================================
-    // VUE APP
-    // ==========================================
-    createApp({
-        setup() {
-            const view = ref('config');
-            const mode = ref('surah');
-            const loading = ref(false);
-            const isOffline = ref(!navigator.onLine);
-            const surahList = ref([]);
-            const selectedSurahs = ref([]);
-            const selectedJuz = ref([]);
-            const searchQuery = ref('');
-            const cacheSize = ref('');
-
-            // Charger les paramètres depuis localStorage
-            const savedSettings = localStorage.getItem('murajaah_settings');
-            const defaultSettings = { reciter: 'ar.alafasy', translation: 'none' };
-            const settings = ref(savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings);
-
-            // Charger les sélections sauvegardées
-            const savedSurahs = localStorage.getItem('murajaah_selectedSurahs');
-            const savedJuz = localStorage.getItem('murajaah_selectedJuz');
-            if (savedSurahs) {
-                try { selectedSurahs.value = JSON.parse(savedSurahs); } catch {}
-            }
-            if (savedJuz) {
-                try { selectedJuz.value = JSON.parse(savedJuz); } catch {}
-            }
-
-            const pool = ref([]);
-            const history = ref([]);
-            const sessionCount = ref(0);
-            const currentKey = ref(null);
-            const currentData = ref({ arabic: '', tr: '', audio: '' });
-            const reveal = ref(false);
-            const isPlaying = ref(false);
-            const audioPlayer = ref(null);
-            const chunkData = ref([]);
-            const chunkSize = 3;
-            const chunkCursor = ref(0);
-
-            const filteredSurahs = computed(() => {
-                if (!searchQuery.value) return surahList.value;
-                const q = searchQuery.value.toLowerCase();
-                return surahList.value.filter(s =>
-                    s.nameEn.toLowerCase().includes(q) ||
-                    s.nameAr.includes(q) ||
-                    String(s.number).includes(q)
-                );
             });
-
-            const poolSize = computed(() => {
-                if (mode.value === 'surah') {
-                    return selectedSurahs.value.reduce((acc, sNum) => {
-                        const s = surahList.value.find(x => x.number === sNum);
-                        return acc + (s ? Math.max(0, s.numberOfAyahs - 1) : 0);
-                    }, 0);
-                } else {
-                    return selectedJuz.value.length * 200;
-                }
-            });
-
-            const currentAudioUrl = computed(() => currentData.value.audio);
-            const hasMoreChunk = computed(() => {
-                if (!currentKey.value) return false;
-                const [s] = currentKey.value.split(':').map(Number);
-                const meta = surahList.value.find(x => x.number === s);
-                if (!meta) return false;
-                const maxAyah = Math.max(1, meta.numberOfAyahs);
-                return chunkCursor.value <= maxAyah;
-            });
-
-            // Observer les changements de sélection et sauvegarder
-            watch(selectedSurahs, (val) => {
-                localStorage.setItem('murajaah_selectedSurahs', JSON.stringify(val));
-            }, { deep: true });
-
-            watch(selectedJuz, (val) => {
-                localStorage.setItem('murajaah_selectedJuz', JSON.stringify(val));
-            }, { deep: true });
-
-            function saveSettings() {
-                localStorage.setItem('murajaah_settings', JSON.stringify(settings.value));
-            }
-
-            function updateCacheSize() {
-                let total = 0;
-                for (let key in localStorage) {
-                    if (localStorage.hasOwnProperty(key) && key.startsWith(CACHE_PREFIX)) {
-                        total += localStorage.getItem(key).length;
-                    }
-                }
-                const kb = (total / 1024).toFixed(1);
-                cacheSize.value = kb > 1000 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
-            }
-
-            onMounted(async () => {
-                // Listeners online/offline
-                window.addEventListener('online', () => { isOffline.value = false; });
-                window.addEventListener('offline', () => { isOffline.value = true; });
-
-                // Charger la liste des sourates
-                const cached = localStorage.getItem('surahList');
-                if (cached) {
-                    try {
-                        surahList.value = JSON.parse(cached);
-                    } catch {}
-                }
-                
-                if (!surahList.value.length) {
-                    try {
-                        const res = await fetchSafe(API.alquran.surahList);
-                        surahList.value = res.data.map(x => ({
-                            number: x.number,
-                            nameAr: x.name.short || x.name,
-                            nameEn: x.name.transliteration?.en || x.englishName,
-                            numberOfAyahs: x.numberOfVerses || x.numberOfAyahs
-                        }));
-                        localStorage.setItem('surahList', JSON.stringify(surahList.value));
-                    } catch (e) {
-                        console.error('Échec du chargement des sourates:', e);
-                    }
-                }
-                
-                updateCacheSize();
-                window.addEventListener('keydown', handleKey);
-            });
-
-            function handleKey(e) {
-                if (view.value !== 'card') return;
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    toggleAudio();
-                } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
-                    if (reveal.value) nextCard();
-                    else revealCard();
-                }
-            }
-
-            function toggleAll(on) {
-                if (mode.value === 'surah') {
-                    selectedSurahs.value = on ? surahList.value.map(s => s.number) : [];
-                } else {
-                    selectedJuz.value = on ? Array.from({ length: 30 }, (_, i) => i + 1) : [];
-                }
-            }
-
-            async function startRevision() {
-                loading.value = true;
-                pool.value = [];
-
-                if (mode.value === 'surah') {
-                    for (const s of selectedSurahs.value) {
-                        const meta = surahList.value.find(x => x.number === s);
-                        if (!meta) continue;
-                        for (let i = 1; i < meta.numberOfAyahs; i++) {
-                            pool.value.push(`${s}:${i}`);
-                        }
-                    }
-                } else {
-                    for (const j of selectedJuz.value) {
-                        try {
-                            const res = await fetchSafe(API.alquran.juz(j));
-                            const ayahs = res.data.ayahs;
-                            ayahs.forEach(a => {
-                                const meta = surahList.value.find(x => x.number === a.surah.number);
-                                if (!meta) { pool.value.push(`${a.surah.number}:${a.numberInSurah}`); return; }
-                                if (a.numberInSurah < meta.numberOfAyahs) {
-                                    pool.value.push(`${a.surah.number}:${a.numberInSurah}`);
-                                }
-                            });
-                        } catch (e) {
-                            console.error(`Erreur chargement Juz ${j}:`, e);
-                        }
-                    }
-                }
-                
-                // Mélanger aléatoirement
-                pool.value.sort(() => Math.random() - 0.5);
-                view.value = 'card';
-                loading.value = false;
-                nextCard();
-            }
-
-            function returnToHome() {
-                view.value = 'config';
-                reveal.value = false;
-                isPlaying.value = false;
-                if (audioPlayer.value) audioPlayer.value.pause();
-                updateCacheSize();
-            }
-
-            function getSurahName(key) {
-                if (!key) return '';
-                const [s] = key.split(':');
-                const meta = surahList.value.find(x => x.number == s);
-                return meta ? meta.nameEn : '';
-            }
-
-            function getAyahNumber(key) {
-                if (!key) return '';
-                const parts = key.split(':');
-                return parts.length > 1 ? parts[1] : '';
-            }
-
-            async function nextCard() {
-                reveal.value = false;
-                chunkData.value = [];
-                isPlaying.value = false;
-                currentData.value = { arabic: '', tr: '', audio: '' };
-
-                if (!pool.value.length) return;
-                
-                let candidateIndex = Math.floor(Math.random() * pool.value.length);
-                let retries = 0;
-                while (retries < 5 && history.value.slice(-5).includes(pool.value[candidateIndex])) {
-                    candidateIndex = Math.floor(Math.random() * pool.value.length);
-                    retries++;
-                }
-
-                currentKey.value = pool.value[candidateIndex];
-                history.value.push(currentKey.value);
-                sessionCount.value++;
-
-                loading.value = true;
-                try {
-                    const [s, a] = currentKey.value.split(':');
-                    await loadAyahData(s, a, currentData.value);
-                    chunkCursor.value = parseInt(a, 10) + 1;
-                } catch (e) {
-                    currentData.value.arabic = 'Erreur de chargement.';
-                    console.error('Erreur chargement verset:', e);
-                }
-                loading.value = false;
-
-                // AUTO-PLAY
-                if (currentAudioUrl.value) {
-                    setTimeout(() => {
-                        if(audioPlayer.value && view.value === 'card') {
-                            audioPlayer.value.play().catch(e => {
-                                console.log("Autoplay bloqué (interaction requise)");
-                            });
-                        }
-                    }, 300);
-                }
-            }
-
-            async function loadAyahData(s, a, targetObj) {
-                const pAr = fetchSafe(API.alquran.ayahAr(s, a));
-                const pTr = settings.value.translation !== 'none'
-                    ? fetchSafe(API.alquran.ayahTr(s, a, settings.value.translation))
-                    : Promise.resolve(null);
-                const pAu = fetchSafe(API.alquran.ayahAudio(s, a, settings.value.reciter));
-
-                const [ar, tr, au] = await Promise.all([pAr, pTr, pAu]);
-                targetObj.arabic = ar?.data?.text || 'Texte indisponible';
-                targetObj.tr = tr?.data?.text || '';
-                targetObj.audio = au?.data?.audio || '';
-            }
-
-            async function revealCard() {
-                reveal.value = true;
-                loading.value = true;
-                await loadNextChunk();
-                loading.value = false;
-            }
-
-            async function loadNextChunk() {
-                if (!currentKey.value) return;
-                const [s] = currentKey.value.split(':').map(Number);
-                const currentStart = chunkCursor.value;
-                const meta = surahList.value.find(x => x.number === s);
-                if (!meta) return;
-                const maxAyah = meta.numberOfAyahs;
-                const limit = Math.min(maxAyah, currentStart + chunkSize - 1);
-
-                if (currentStart > maxAyah) return;
-                const promises = [];
-                for (let i = currentStart; i <= limit; i++) {
-                    const item = { ayah: i, surahName: meta.nameEn, arabic: '...', tr: '' };
-                    chunkData.value.push(item);
-                    promises.push(loadAyahData(s, i, item));
-                }
-
-                chunkCursor.value = limit + 1;
-                await Promise.all(promises);
-            }
-
-            function toggleAudio() {
-                if (!audioPlayer.value) return;
-                if (audioPlayer.value.paused) audioPlayer.value.play();
-                else audioPlayer.value.pause();
-            }
-            
-            function audioEnded() { 
-                isPlaying.value = false; 
-            }
-
-            return {
-                view, mode, loading, isOffline, surahList, filteredSurahs, selectedSurahs, selectedJuz, searchQuery,
-                settings, poolSize, sessionCount, currentData, currentAudioUrl, reveal, isPlaying,
-                chunkData, hasMoreChunk, audioPlayer, currentKey, cacheSize,
-                toggleAll, startRevision, returnToHome, nextCard, revealCard, loadNextChunk, toggleAudio,
-                audioEnded, getSurahName, getAyahNumber, saveSettings
-            };
-        }
-    }).mount('#app');
-</script>
-</body>
-</html>
+        
