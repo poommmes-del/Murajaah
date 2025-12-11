@@ -1,164 +1,161 @@
-const CACHE_NAME = 'murajaah-v1.2';
-const STATIC_CACHE = 'murajaah-static-v1.2';
-const DYNAMIC_CACHE = 'murajaah-dynamic-v1.2';
-const AUDIO_CACHE = 'murajaah-audio-v1';
+const CACHE_VERSION = 'v1.3';
+const CACHE_NAME = `murajaah-${CACHE_VERSION}`;
+const OFFLINE_URL = './offline.html';
 
-// Resources to cache immediately
-const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    'https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap',
-    'https://cdn.tailwindcss.com',
-    'https://unpkg.com/vue@3/dist/vue.global.prod.js'
+// Fichiers à mettre en cache immédiatement
+const PRECACHE_ASSETS = [
+    './',
+    './index.html',
+    './manifest.json',
+    './offline.html',
+    './icons/icon-192.png',
+    './icons/icon-512.png'
 ];
 
-// API endpoints to cache
-const API_CACHE_PATTERNS = [
-    /api\.alquran\.cloud/
-];
-
-// Install event - cache static assets
+// Installation du Service Worker
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing...');
+    console.log('[SW] Installation...');
+    
     event.waitUntil(
-        caches.open(STATIC_CACHE)
+        caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[SW] Caching static assets');
-                return cache.addAll(STATIC_ASSETS.map(url => {
-                    return new Request(url, { mode: 'cors' });
-                })).catch(err => {
-                    console.log('[SW] Some static assets failed to cache:', err);
-                });
+                console.log('[SW] Mise en cache des fichiers statiques');
+                return cache.addAll(PRECACHE_ASSETS);
             })
-            .then(() => self.skipWaiting())
+            .then(() => {
+                console.log('[SW] Installation terminée');
+                return self.skipWaiting();
+            })
+            .catch((error) => {
+                console.error('[SW] Erreur installation:', error);
+            })
     );
 });
 
-// Activate event - clean old caches
+// Activation du Service Worker
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating...');
+    console.log('[SW] Activation...');
+    
     event.waitUntil(
         caches.keys()
             .then((cacheNames) => {
                 return Promise.all(
                     cacheNames
-                        .filter((name) => {
-                            return name.startsWith('murajaah-') && 
-                                   name !== STATIC_CACHE && 
-                                   name !== DYNAMIC_CACHE &&
-                                   name !== AUDIO_CACHE;
-                        })
+                        .filter((name) => name.startsWith('murajaah-') && name !== CACHE_NAME)
                         .map((name) => {
-                            console.log('[SW] Deleting old cache:', name);
+                            console.log('[SW] Suppression ancien cache:', name);
                             return caches.delete(name);
                         })
                 );
             })
-            .then(() => self.clients.claim())
+            .then(() => {
+                console.log('[SW] Activation terminée');
+                return self.clients.claim();
+            })
     );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Interception des requêtes
 self.addEventListener('fetch', (event) => {
-    const { request } = event;
+    const request = event.request;
     const url = new URL(request.url);
-
-    // Skip non-GET requests
-    if (request.method !== 'GET') return;
-
-    // Handle API requests
-    if (API_CACHE_PATTERNS.some(pattern => pattern.test(url.href))) {
-        event.respondWith(networkFirstWithCache(request, DYNAMIC_CACHE));
+    
+    // Ignorer les requêtes non-GET
+    if (request.method !== 'GET') {
         return;
     }
-
-    // Handle audio files
-    if (url.href.includes('.mp3') || url.href.includes('audio')) {
-        event.respondWith(cacheFirstWithNetwork(request, AUDIO_CACHE));
+    
+    // Ignorer les requêtes chrome-extension, etc.
+    if (!url.protocol.startsWith('http')) {
         return;
     }
-
-    // Handle fonts
-    if (url.href.includes('fonts.googleapis.com') || url.href.includes('fonts.gstatic.com')) {
-        event.respondWith(cacheFirstWithNetwork(request, STATIC_CACHE));
+    
+    // Stratégie pour les requêtes de navigation (pages HTML)
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    // Mettre en cache la réponse
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(request, responseClone);
+                    });
+                    return response;
+                })
+                .catch(() => {
+                    // Hors ligne : retourner depuis le cache
+                    return caches.match(request)
+                        .then((cachedResponse) => {
+                            if (cachedResponse) {
+                                return cachedResponse;
+                            }
+                            // Si pas en cache, retourner la page d'accueil cachée
+                            return caches.match('./index.html')
+                                .then((indexResponse) => {
+                                    if (indexResponse) {
+                                        return indexResponse;
+                                    }
+                                    // Dernier recours : page offline
+                                    return caches.match(OFFLINE_URL);
+                                });
+                        });
+                })
+        );
         return;
     }
-
-    // Handle static assets
-    event.respondWith(cacheFirstWithNetwork(request, STATIC_CACHE));
+    
+    // Stratégie pour les API AlQuran (Network First)
+    if (url.hostname.includes('alquran.cloud')) {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    if (response.ok) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, responseClone);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(request);
+                })
+        );
+        return;
+    }
+    
+    // Stratégie pour les autres ressources (Cache First)
+    event.respondWith(
+        caches.match(request)
+            .then((cachedResponse) => {
+                if (cachedResponse) {
+                    // Mise à jour en arrière-plan
+                    fetch(request).then((response) => {
+                        if (response.ok) {
+                            caches.open(CACHE_NAME).then((cache) => {
+                                cache.put(request, response);
+                            });
+                        }
+                    }).catch(() => {});
+                    
+                    return cachedResponse;
+                }
+                
+                return fetch(request)
+                    .then((response) => {
+                        if (response.ok) {
+                            const responseClone = response.clone();
+                            caches.open(CACHE_NAME).then((cache) => {
+                                cache.put(request, responseClone);
+                            });
+                        }
+                        return response;
+                    });
+            })
+    );
 });
 
-// Cache-first strategy (for static assets)
-async function cacheFirstWithNetwork(request, cacheName) {
-    const cache = await caches.open(cacheName);
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-        // Return cached version and update in background
-        fetchAndCache(request, cache);
-        return cachedResponse;
-    }
-
-    try {
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-            cache.put(request, networkResponse.clone());
-        }
-        return networkResponse;
-    } catch (error) {
-        // Return offline page or fallback
-        return new Response('Offline - Contenu non disponible', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({
-                'Content-Type': 'text/plain'
-            })
-        });
-    }
-}
-
-// Network-first strategy (for API)
-async function networkFirstWithCache(request, cacheName) {
-    const cache = await caches.open(cacheName);
-    
-    try {
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-            cache.put(request, networkResponse.clone());
-        }
-        return networkResponse;
-    } catch (error) {
-        const cachedResponse = await cache.match(request);
-        if (cachedResponse) {
-            return cachedResponse;
-        }
-        
-        return new Response(JSON.stringify({
-            error: true,
-            message: 'Offline - Données en cache non disponibles'
-        }), {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-        });
-    }
-}
-
-// Background fetch and cache
-async function fetchAndCache(request, cache) {
-    try {
-        const response = await fetch(request);
-        if (response.ok) {
-            cache.put(request, response);
-        }
-    } catch (error) {
-        // Silently fail for background updates
-    }
-}
-
-// Handle messages from the app
+// Réception de messages
 self.addEventListener('message', (event) => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
@@ -173,43 +170,4 @@ self.addEventListener('message', (event) => {
             });
         });
     }
-});
-
-// Background sync for offline actions
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-data') {
-        event.waitUntil(syncData());
-    }
-});
-
-async function syncData() {
-    // Sync any pending data when back online
-    console.log('[SW] Syncing data...');
-}
-
-// Push notifications (for future use)
-self.addEventListener('push', (event) => {
-    if (event.data) {
-        const data = event.data.json();
-        const options = {
-            body: data.body,
-            icon: '/icons/icon-192.png',
-            badge: '/icons/icon-72.png',
-            vibrate: [100, 50, 100],
-            data: {
-                url: data.url || '/'
-            }
-        };
-        
-        event.waitUntil(
-            self.registration.showNotification(data.title, options)
-        );
-    }
-});
-
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    event.waitUntil(
-        clients.openWindow(event.notification.data.url)
-    );
 });
