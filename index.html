@@ -5,11 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Murajaah — Révision Élégante</title>
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#020617">
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Application de révision du Noble Coran">
+    <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-title" content="Murajaah">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Murajaah">
+    <meta name="msapplication-TileColor" content="#10b981">
+    <meta name="msapplication-navbutton-color" content="#10b981">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons pour iOS -->
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+    
+    <!-- Splash screens iOS -->
+    <link rel="apple-touch-startup-image" href="icons/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px)">
+    <link rel="apple-touch-startup-image" href="icons/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px)">
+    <link rel="apple-touch-startup-image" href="icons/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px)">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,6 +68,7 @@
                     animation: {
                         'fade-in': 'fadeIn 0.6s ease-out',
                         'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
                     keyframes: {
                         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -75,19 +99,185 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
         
-        /* Empêcher le pull-to-refresh sur mobile pour une sensation native */
-        body { overscroll-behavior-y: none; }
+        /* Splash screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .splash-logo {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.6)); }
+        }
+        
+        /* Offline indicator */
+        .offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 10000;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .offline-banner.show {
+            transform: translateY(0);
+        }
+        
+        /* Install prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #065f46, #064e3b);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 9998;
+            transform: translateY(200%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .install-prompt.show {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans selection:bg-primary-500 selection:text-white">
+
+<!-- Splash Screen -->
+<div id="splash" class="splash-screen">
+    <div class="splash-logo mb-6">
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Outer decorative ring -->
+            <circle cx="60" cy="60" r="56" stroke="url(#gradient1)" stroke-width="2" opacity="0.3"/>
+            <circle cx="60" cy="60" r="48" stroke="url(#gradient1)" stroke-width="1" opacity="0.2"/>
+            
+            <!-- Main background circle -->
+            <circle cx="60" cy="60" r="44" fill="url(#gradient2)"/>
+            
+            <!-- Islamic geometric pattern -->
+            <path d="M60 20L65 30L60 25L55 30L60 20Z" fill="white" fill-opacity="0.9"/>
+            <path d="M60 100L55 90L60 95L65 90L60 100Z" fill="white" fill-opacity="0.9"/>
+            <path d="M20 60L30 55L25 60L30 65L20 60Z" fill="white" fill-opacity="0.9"/>
+            <path d="M100 60L90 65L95 60L90 55L100 60Z" fill="white" fill-opacity="0.9"/>
+            
+            <!-- Central book/quran symbol -->
+            <rect x="40" y="42" width="40" height="36" rx="3" fill="white" fill-opacity="0.15" stroke="white" stroke-width="1.5"/>
+            <line x1="60" y1="42" x2="60" y2="78" stroke="white" stroke-width="1.5"/>
+            
+            <!-- Book pages lines -->
+            <line x1="45" y1="50" x2="55" y2="50" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="45" y1="55" x2="55" y2="55" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="45" y1="60" x2="55" y2="60" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="45" y1="65" x2="55" y2="65" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="45" y1="70" x2="55" y2="70" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            
+            <line x1="65" y1="50" x2="75" y2="50" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="65" y1="55" x2="75" y2="55" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="65" y1="60" x2="75" y2="60" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="65" y1="65" x2="75" y2="65" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            <line x1="65" y1="70" x2="75" y2="70" stroke="white" stroke-opacity="0.7" stroke-width="1"/>
+            
+            <!-- Decorative crescents -->
+            <path d="M30 35 A12 12 0 0 1 35 30" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
+            <path d="M90 35 A12 12 0 0 0 85 30" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
+            <path d="M30 85 A12 12 0 0 0 35 90" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
+            <path d="M90 85 A12 12 0 0 1 85 90" stroke="white" stroke-opacity="0.4" stroke-width="1" fill="none"/>
+            
+            <defs>
+                <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981"/>
+                    <stop offset="100%" stop-color="#059669"/>
+                </linearGradient>
+                <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981"/>
+                    <stop offset="100%" stop-color="#065f46"/>
+                </linearGradient>
+            </defs>
+        </svg>
+    </div>
+    <h1 class="text-3xl font-kufi font-bold text-primary-400 mb-2">Murajaah</h1>
+    <p class="text-slate-400 text-sm">Chargement...</p>
+    <div class="mt-6 flex gap-1">
+        <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+        <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+        <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+    </div>
+</div>
+
+<!-- Offline Banner -->
+<div id="offlineBanner" class="offline-banner">
+    ⚡ Mode hors ligne — Les données en cache sont utilisées
+</div>
+
+<!-- Install Prompt -->
+<div id="installPrompt" class="install-prompt">
+    <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+        </div>
+        <div class="flex-1">
+            <h3 class="text-white font-semibold mb-1">Installer Murajaah</h3>
+            <p class="text-slate-300 text-sm mb-3">Ajoutez l'application à votre écran d'accueil pour un accès rapide, même hors ligne.</p>
+            <div class="flex gap-2">
+                <button id="installBtn" class="flex-1 bg-primary-500 hover:bg-primary-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                    Installer
+                </button>
+                <button id="dismissInstall" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">
+                    Plus tard
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="app" v-cloak class="h-full flex flex-col relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-night-900 via-night-950 to-night-950">
 
     <header class="flex justify-between items-center px-6 py-5 border-b border-white/5 bg-night-950/50 backdrop-blur-md z-20 shrink-0">
         <div class="flex items-center gap-4 cursor-pointer group" @click="returnToHome">
             <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-900 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.25)] border border-white/10 group-hover:scale-105 transition-transform duration-300">
-                <img src="icon.png" class="w-8 h-8 object-contain" alt="Logo" onerror="this.style.display='none'">
                 <div class="absolute inset-0 rounded-2xl bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <!-- Logo inline SVG -->
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                    <rect x="4" y="5" width="16" height="14" rx="1" stroke-width="1.5"/>
+                    <line x1="12" y1="5" x2="12" y2="19" stroke-width="1.5"/>
+                    <line x1="6" y1="8" x2="10" y2="8" stroke-opacity="0.7"/>
+                    <line x1="6" y1="11" x2="10" y2="11" stroke-opacity="0.7"/>
+                    <line x1="6" y1="14" x2="10" y2="14" stroke-opacity="0.7"/>
+                    <line x1="14" y1="8" x2="18" y2="8" stroke-opacity="0.7"/>
+                    <line x1="14" y1="11" x2="18" y2="11" stroke-opacity="0.7"/>
+                    <line x1="14" y1="14" x2="18" y2="14" stroke-opacity="0.7"/>
+                </svg>
             </div>
             <div class="flex flex-col">
                 <h1 class="text-2xl font-kufi font-bold tracking-wide text-primary-400 leading-none group-hover:text-primary-300 transition-colors">Murajaah</h1>
@@ -96,14 +286,17 @@
         </div>
 
         <div class="flex items-center gap-3">
-             <div v-if="!isOnline" class="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] text-red-400 font-bold uppercase tracking-wider">
-                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                Offline
-             </div>
-             <div v-else-if="isCaching" class="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] text-blue-400 font-bold uppercase tracking-wider">
-                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                Mise en cache
-             </div>
+            <!-- Offline indicator -->
+            <div v-if="isOffline" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30">
+                <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                <span class="text-xs text-amber-400 font-medium">Hors ligne</span>
+            </div>
+            
+            <div v-if="view === 'card'" class="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 text-xs text-slate-400 font-medium">
+                <span class="opacity-60">Raccourcis :</span>
+                <kbd class="bg-white/10 px-2 py-0.5 rounded text-slate-200 border border-white/10">Espace</kbd>
+                <kbd class="bg-white/10 px-2 py-0.5 rounded text-slate-200 border border-white/10">→</kbd>
+            </div>
         </div>
     </header>
 
@@ -173,7 +366,7 @@
                         <div>
                             <label class="block text-xs text-slate-500 mb-2 font-medium">Récitateur</label>
                             <div class="relative">
-                                <select v-model="settings.reciter" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-4 py-3 outline-none focus:border-primary-500/50 text-slate-200 appearance-none cursor-pointer hover:bg-black/50 transition-colors">
+                                <select v-model="settings.reciter" @change="saveSettings" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-4 py-3 outline-none focus:border-primary-500/50 text-slate-200 appearance-none cursor-pointer hover:bg-black/50 transition-colors">
                                     <option value="ar.alafasy">Mishary Alafasy</option>
                                     <option value="ar.husary">Mahmoud Al-Husary</option>
                                     <option value="ar.hudhaify">Ali Al-Hudhaify</option>
@@ -184,20 +377,20 @@
                                     <option value="ar.saoodshuraym">Shuraym</option>
                                 </select>
                                 <div class="absolute right-3 top-3.5 pointer-events-none text-slate-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs text-slate-500 mb-2 font-medium">Traduction</label>
                             <div class="relative">
-                                <select v-model="settings.translation" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-4 py-3 outline-none focus:border-primary-500/50 text-slate-200 appearance-none cursor-pointer hover:bg-black/50 transition-colors">
+                                <select v-model="settings.translation" @change="saveSettings" class="w-full bg-black/40 border border-white/10 text-sm rounded-xl px-4 py-3 outline-none focus:border-primary-500/50 text-slate-200 appearance-none cursor-pointer hover:bg-black/50 transition-colors">
                                     <option value="none">Aucune (Arabe seul)</option>
                                     <option value="fr.hamidullah">Français</option>
                                     <option value="en.sahih">English</option>
                                 </select>
                                 <div class="absolute right-3 top-3.5 pointer-events-none text-slate-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
                         </div>
@@ -246,8 +439,8 @@
                     <div class="w-full max-w-3xl my-auto animate-slide-up flex flex-col items-center">
 
                         <div class="w-full text-center relative py-8">
-                             <span class="absolute top-0 left-0 text-6xl text-white/5 font-serif">“</span>
-                             <span class="absolute bottom-0 right-0 text-6xl text-white/5 font-serif">”</span>
+                             <span class="absolute top-0 left-0 text-6xl text-white/5 font-serif">"</span>
+                             <span class="absolute bottom-0 right-0 text-6xl text-white/5 font-serif">"</span>
 
                             <p class="text-4xl sm:text-5xl md:text-6xl font-quran text-white leading-[2.2] tracking-wide filter drop-shadow-lg" dir="rtl">
                                 {{ currentData?.arabic }}
@@ -255,8 +448,8 @@
                         </div>
 
                         <audio ref="audioPlayer" :src="currentAudioUrl" class="hidden"
-                               @play="isPlaying = true" 
-                               @pause="isPlaying = false" 
+                               @play="isPlaying = true"
+                               @pause="isPlaying = false"
                                @ended="audioEnded">
                         </audio>
 
@@ -312,11 +505,11 @@
 
                 <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-night-950 via-night-950/95 to-transparent z-10 flex justify-center">
                     <div class="w-full max-w-lg flex items-stretch gap-3">
-                        
+
                         <button v-if="currentAudioUrl" @click="toggleAudio"
                             class="shrink-0 w-16 rounded-2xl flex items-center justify-center transition-all shadow-lg border border-white/10 group focus:outline-none"
                             :class="isPlaying ? 'bg-primary-500 text-white shadow-primary-500/30' : 'bg-white/10 backdrop-blur-md text-primary-400 hover:bg-white/20 hover:border-white/20'">
-                            
+
                             <svg v-if="!isPlaying" class="w-8 h-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                             </svg>
@@ -350,13 +543,82 @@
     </main>
 
     <footer class="py-4 text-center text-[10px] text-slate-600 font-medium tracking-wide shrink-0">
-            MURAJAAH v1.1 &bull; PWA Enabled &bull;
+            MURAJAAH v1.0 &bull; Données AlQuran.cloud &bull; <span v-if="cacheSize">Cache: {{ cacheSize }}</span>
     </footer>
 
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => {
+                    console.log('✅ Service Worker enregistré:', reg.scope);
+                })
+                .catch(err => {
+                    console.log('❌ Service Worker échec:', err);
+                });
+        });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    const installPrompt = document.getElementById('installPrompt');
+    const installBtn = document.getElementById('installBtn');
+    const dismissInstall = document.getElementById('dismissInstall');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Check if already dismissed
+        if (!localStorage.getItem('installDismissed')) {
+            setTimeout(() => {
+                installPrompt.classList.add('show');
+            }, 3000);
+        }
+    });
+
+    installBtn?.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('Install:', outcome);
+        deferredPrompt = null;
+        installPrompt.classList.remove('show');
+    });
+
+    dismissInstall?.addEventListener('click', () => {
+        installPrompt.classList.remove('show');
+        localStorage.setItem('installDismissed', Date.now());
+    });
+
+    // Offline detection
+    const offlineBanner = document.getElementById('offlineBanner');
+    
+    function updateOnlineStatus() {
+        if (!navigator.onLine) {
+            offlineBanner.classList.add('show');
+        } else {
+            offlineBanner.classList.remove('show');
+        }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    // Hide splash screen
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            document.getElementById('splash').classList.add('hidden');
+        }, 1500);
+    });
+
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+    
     const API = {
         alquran: {
             surahList: 'https://api.alquran.cloud/v1/surah',
@@ -371,21 +633,82 @@
         (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
         (url) => `https://thingproxy.freeboard.io/fetch/${url}`
     ];
-    
-    // Fonction fetch améliorée pour utiliser le cache SW
+
+    // Cache utility functions
+    const CACHE_PREFIX = 'murajaah_';
+    const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    function getCached(key) {
+        try {
+            const item = localStorage.getItem(CACHE_PREFIX + key);
+            if (!item) return null;
+            const { data, timestamp } = JSON.parse(item);
+            if (Date.now() - timestamp > CACHE_EXPIRY) {
+                localStorage.removeItem(CACHE_PREFIX + key);
+                return null;
+            }
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setCache(key, data) {
+        try {
+            localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
+                data,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            // LocalStorage full, clear old items
+            clearOldCache();
+        }
+    }
+
+    function clearOldCache() {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
+        const items = keys.map(k => ({
+            key: k,
+            timestamp: JSON.parse(localStorage.getItem(k))?.timestamp || 0
+        })).sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Remove oldest 20%
+        const toRemove = Math.ceil(items.length * 0.2);
+        items.slice(0, toRemove).forEach(item => localStorage.removeItem(item.key));
+    }
+
     async function fetchSafe(url) {
-        // En mode PWA, le fetch standard est intercepté par le Service Worker qui gère le cache
+        const cacheKey = btoa(url).slice(0, 50);
+        const cached = getCached(cacheKey);
+        if (cached) return cached;
+
         try {
             const r = await fetch(url);
-            if (r.ok) return r.json();
+            if (r.ok) {
+                const data = await r.json();
+                setCache(cacheKey, data);
+                return data;
+            }
             throw new Error('Direct fail');
         } catch (e) {
+            // Try proxies if direct fails
             for (const wrap of PROXIES) {
                 try {
                     const r = await fetch(wrap(url));
-                    if (r.ok) return r.json();
+                    if (r.ok) {
+                        const data = await r.json();
+                        setCache(cacheKey, data);
+                        return data;
+                    }
                 } catch (_) {}
             }
+            
+            // If all fails, check cache even if expired
+            const expiredCache = localStorage.getItem(CACHE_PREFIX + cacheKey);
+            if (expiredCache) {
+                return JSON.parse(expiredCache).data;
+            }
+            
             throw e;
         }
     }
@@ -395,12 +718,24 @@
             const view = ref('config');
             const mode = ref('surah');
             const loading = ref(false);
+            const isOffline = ref(!navigator.onLine);
             const surahList = ref([]);
             const selectedSurahs = ref([]);
             const selectedJuz = ref([]);
             const searchQuery = ref('');
-            const settings = ref({ reciter: 'ar.alafasy', translation: 'none' });
-            
+            const cacheSize = ref('');
+
+            // Load settings from localStorage
+            const savedSettings = localStorage.getItem('murajaah_settings');
+            const defaultSettings = { reciter: 'ar.alafasy', translation: 'none' };
+            const settings = ref(savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings);
+
+            // Load saved selections
+            const savedSurahs = localStorage.getItem('murajaah_selectedSurahs');
+            const savedJuz = localStorage.getItem('murajaah_selectedJuz');
+            if (savedSurahs) selectedSurahs.value = JSON.parse(savedSurahs);
+            if (savedJuz) selectedJuz.value = JSON.parse(savedJuz);
+
             const pool = ref([]);
             const history = ref([]);
             const sessionCount = ref(0);
@@ -412,13 +747,6 @@
             const chunkData = ref([]);
             const chunkSize = 3;
             const chunkCursor = ref(0);
-            
-            // PWA States
-            const isOnline = ref(navigator.onLine);
-            const isCaching = ref(false);
-
-            window.addEventListener('online', () => isOnline.value = true);
-            window.addEventListener('offline', () => isOnline.value = false);
 
             const filteredSurahs = computed(() => {
                 if (!searchQuery.value) return surahList.value;
@@ -451,18 +779,35 @@
                 return chunkCursor.value <= maxAyah;
             });
 
-            onMounted(async () => {
-                // Enregistrer le Service Worker
-                if ('serviceWorker' in navigator) {
-                    try {
-                        await navigator.serviceWorker.register('./sw.js');
-                        console.log('SW Registered');
-                    } catch (e) {
-                        console.log('SW Fail', e);
+            // Watch for selection changes and save
+            watch(selectedSurahs, (val) => {
+                localStorage.setItem('murajaah_selectedSurahs', JSON.stringify(val));
+            }, { deep: true });
+
+            watch(selectedJuz, (val) => {
+                localStorage.setItem('murajaah_selectedJuz', JSON.stringify(val));
+            }, { deep: true });
+
+            function saveSettings() {
+                localStorage.setItem('murajaah_settings', JSON.stringify(settings.value));
+            }
+
+            function updateCacheSize() {
+                let total = 0;
+                for (let key in localStorage) {
+                    if (key.startsWith(CACHE_PREFIX)) {
+                        total += localStorage.getItem(key).length;
                     }
                 }
+                const kb = (total / 1024).toFixed(1);
+                cacheSize.value = kb > 1000 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
+            }
 
-                // Charger liste Sourates (Localstorage first)
+            onMounted(async () => {
+                // Online/offline listeners
+                window.addEventListener('online', () => { isOffline.value = false; });
+                window.addEventListener('offline', () => { isOffline.value = true; });
+
                 const cached = localStorage.getItem('surahList');
                 if (cached) {
                     surahList.value = JSON.parse(cached);
@@ -480,6 +825,8 @@
                         console.error('Failed to load surahs');
                     }
                 }
+                
+                updateCacheSize();
                 window.addEventListener('keydown', handleKey);
             });
 
@@ -515,8 +862,7 @@
                         }
                     }
                 } else {
-                    // Logic Juz inchangée
-                     for (const j of selectedJuz.value) {
+                    for (const j of selectedJuz.value) {
                         try {
                             const res = await fetchSafe(API.alquran.juz(j));
                             const ayahs = res.data.ayahs;
@@ -533,40 +879,7 @@
                 pool.value.sort(() => Math.random() - 0.5);
                 view.value = 'card';
                 loading.value = false;
-                
-                // Démarrer la mise en cache background
-                backgroundCache();
-                
                 nextCard();
-            }
-
-            // FONCTION INTELLIGENTE DE CACHING EN ARRIERE PLAN
-            async function backgroundCache() {
-                if (!navigator.onLine || pool.value.length === 0) return;
-                isCaching.value = true;
-                
-                // On prend les 20 prochains éléments du pool mélangé pour les pré-charger
-                // On ne charge pas tout d'un coup pour éviter le ban API
-                const itemsToCache = pool.value.slice(0, 20); 
-
-                for (const key of itemsToCache) {
-                    const [s, a] = key.split(':');
-                    // Simuler des fetchs. Le Service Worker va automatiquement les intercepter et les cacher.
-                    try {
-                        // Fetch Audio
-                        fetch(API.alquran.ayahAudio(s, a, settings.value.reciter));
-                        // Fetch Texte Arabe
-                        fetch(API.alquran.ayahAr(s, a));
-                        // Fetch Traduction si besoin
-                        if (settings.value.translation !== 'none') {
-                            fetch(API.alquran.ayahTr(s, a, settings.value.translation));
-                        }
-                        
-                        // Petite pause pour être gentil avec l'API
-                        await new Promise(r => setTimeout(r, 100)); 
-                    } catch (e) {}
-                }
-                isCaching.value = false;
             }
 
             function returnToHome() {
@@ -574,6 +887,7 @@
                 reveal.value = false;
                 isPlaying.value = false;
                 if (audioPlayer.value) audioPlayer.value.pause();
+                updateCacheSize();
             }
 
             function getSurahName(key) {
@@ -607,45 +921,25 @@
                 history.value.push(currentKey.value);
                 sessionCount.value++;
 
-                // Fallback LocalStorage pour données texte si offline complet sans cache SW
-                const offlineKey = `offline_txt_${currentKey.value}`;
-
                 loading.value = true;
                 try {
                     const [s, a] = currentKey.value.split(':');
                     await loadAyahData(s, a, currentData.value);
-                    
-                    // Sauvegarde de secours du texte dans LocalStorage
-                    localStorage.setItem(offlineKey, JSON.stringify(currentData.value));
-
                     chunkCursor.value = parseInt(a, 10) + 1;
                 } catch (e) {
-                    // Essai de récupération LocalStorage si network fail
-                    const saved = localStorage.getItem(offlineKey);
-                    if (saved) {
-                        currentData.value = JSON.parse(saved);
-                    } else {
-                        currentData.value.arabic = 'Erreur connexion / Non caché';
-                    }
+                    currentData.value.arabic = 'Erreur de chargement.';
                 }
                 loading.value = false;
 
+                // AUTO-PLAY LOGIC
                 if (currentAudioUrl.value) {
                     setTimeout(() => {
                         if(audioPlayer.value && view.value === 'card') {
                             audioPlayer.value.play().catch(e => {
-                                console.log("Autoplay bloqué");
+                                console.log("Autoplay bloqué (interaction requise)");
                             });
                         }
                     }, 300);
-                }
-                
-                // Déclencher un mini cache préventif pour la suite (prochain hasard)
-                // On prend quelques items au hasard dans le pool restant pour les charger
-                if(navigator.onLine) {
-                     const randomNext = pool.value[Math.floor(Math.random() * pool.value.length)];
-                     const [ns, na] = randomNext.split(':');
-                     fetch(API.alquran.ayahAudio(ns, na, settings.value.reciter));
                 }
             }
 
@@ -698,12 +992,11 @@
             function audioEnded() { isPlaying.value = false; }
 
             return {
-                view, mode, loading, surahList, filteredSurahs, selectedSurahs, selectedJuz, searchQuery,
+                view, mode, loading, isOffline, surahList, filteredSurahs, selectedSurahs, selectedJuz, searchQuery,
                 settings, poolSize, sessionCount, currentData, currentAudioUrl, reveal, isPlaying,
-                chunkData, hasMoreChunk, audioPlayer, currentKey,
-                toggleAll, startRevision, returnToHome, nextCard, revealCard, loadNextChunk, toggleAudio, 
-                audioEnded, getSurahName, getAyahNumber,
-                isOnline, isCaching
+                chunkData, hasMoreChunk, audioPlayer, currentKey, cacheSize,
+                toggleAll, startRevision, returnToHome, nextCard, revealCard, loadNextChunk, toggleAudio,
+                audioEnded, getSurahName, getAyahNumber, saveSettings
             };
         }
     }).mount('#app');
