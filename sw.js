@@ -1,8 +1,6 @@
-const CACHE_VERSION = 'v1.3';
+const CACHE_VERSION = 'v1.4';
 const CACHE_NAME = `murajaah-${CACHE_VERSION}`;
-const OFFLINE_URL = './offline.html';
 
-// Fichiers à mettre en cache immédiatement
 const PRECACHE_ASSETS = [
     './',
     './index.html',
@@ -12,30 +10,27 @@ const PRECACHE_ASSETS = [
     './icons/icon-512.png'
 ];
 
-// Installation du Service Worker
+// CDNs à mettre en cache
+const CDN_URLS = [
+    'https://unpkg.com/vue@3/dist/vue.global.prod.js',
+    'https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap'
+];
+
 self.addEventListener('install', (event) => {
     console.log('[SW] Installation...');
-    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[SW] Mise en cache des fichiers statiques');
+                console.log('[SW] Mise en cache des fichiers');
                 return cache.addAll(PRECACHE_ASSETS);
             })
-            .then(() => {
-                console.log('[SW] Installation terminée');
-                return self.skipWaiting();
-            })
-            .catch((error) => {
-                console.error('[SW] Erreur installation:', error);
-            })
+            .then(() => self.skipWaiting())
+            .catch((error) => console.error('[SW] Erreur:', error))
     );
 });
 
-// Activation du Service Worker
 self.addEventListener('activate', (event) => {
     console.log('[SW] Activation...');
-    
     event.waitUntil(
         caches.keys()
             .then((cacheNames) => {
@@ -48,106 +43,70 @@ self.addEventListener('activate', (event) => {
                         })
                 );
             })
-            .then(() => {
-                console.log('[SW] Activation terminée');
-                return self.clients.claim();
-            })
+            .then(() => self.clients.claim())
     );
 });
 
-// Interception des requêtes
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
-    
-    // Ignorer les requêtes non-GET
-    if (request.method !== 'GET') {
-        return;
-    }
-    
-    // Ignorer les requêtes chrome-extension, etc.
-    if (!url.protocol.startsWith('http')) {
-        return;
-    }
-    
-    // Stratégie pour les requêtes de navigation (pages HTML)
+
+    if (request.method !== 'GET') return;
+    if (!url.protocol.startsWith('http')) return;
+
+    // Navigation requests
     if (request.mode === 'navigate') {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    // Mettre en cache la réponse
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
                     return response;
                 })
                 .catch(() => {
-                    // Hors ligne : retourner depuis le cache
                     return caches.match(request)
-                        .then((cachedResponse) => {
-                            if (cachedResponse) {
-                                return cachedResponse;
-                            }
-                            // Si pas en cache, retourner la page d'accueil cachée
-                            return caches.match('./index.html')
-                                .then((indexResponse) => {
-                                    if (indexResponse) {
-                                        return indexResponse;
-                                    }
-                                    // Dernier recours : page offline
-                                    return caches.match(OFFLINE_URL);
-                                });
-                        });
+                        .then((cached) => cached || caches.match('./index.html'))
+                        .then((response) => response || caches.match('./offline.html'));
                 })
         );
         return;
     }
-    
-    // Stratégie pour les API AlQuran (Network First)
+
+    // API AlQuran - Network first
     if (url.hostname.includes('alquran.cloud')) {
         event.respondWith(
             fetch(request)
                 .then((response) => {
                     if (response.ok) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
                     }
                     return response;
                 })
-                .catch(() => {
-                    return caches.match(request);
-                })
+                .catch(() => caches.match(request))
         );
         return;
     }
-    
-    // Stratégie pour les autres ressources (Cache First)
+
+    // CDNs et autres ressources - Cache first
     event.respondWith(
         caches.match(request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
+            .then((cached) => {
+                if (cached) {
                     // Mise à jour en arrière-plan
                     fetch(request).then((response) => {
                         if (response.ok) {
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(request, response);
-                            });
+                            caches.open(CACHE_NAME).then((cache) => cache.put(request, response));
                         }
                     }).catch(() => {});
-                    
-                    return cachedResponse;
+                    return cached;
                 }
-                
+
                 return fetch(request)
                     .then((response) => {
                         if (response.ok) {
-                            const responseClone = response.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(request, responseClone);
-                            });
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
                         }
                         return response;
                     });
@@ -155,19 +114,8 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Réception de messages
 self.addEventListener('message', (event) => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
-    }
-    
-    if (event.data === 'clearCache') {
-        caches.keys().then((names) => {
-            names.forEach((name) => {
-                if (name.startsWith('murajaah-')) {
-                    caches.delete(name);
-                }
-            });
-        });
     }
 });
