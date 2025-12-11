@@ -1,0 +1,54 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="512" height="512" rx="102" fill="url(#bg-gradient)"/>
+
+    <!-- Outer decorative ring -->
+    <circle cx="256" cy="256" r="220" stroke="white" stroke-width="3" opacity="0.15"/>
+    <circle cx="256" cy="256" r="200" stroke="white" stroke-width="2" opacity="0.1"/>
+
+    <!-- Islamic star points -->
+    <path d="M256 56L270 96L256 76L242 96L256 56Z" fill="white" fill-opacity="0.8"/>
+    <path d="M256 456L242 416L256 436L270 416L256 456Z" fill="white" fill-opacity="0.8"/>
+    <path d="M56 256L96 242L76 256L96 270L56 256Z" fill="white" fill-opacity="0.8"/>
+    <path d="M456 256L416 270L436 256L416 242L456 256Z" fill="white" fill-opacity="0.8"/>
+
+    <!-- Diagonal stars -->
+    <path d="M120 120L145 145L130 130L115 145L120 120Z" fill="white" fill-opacity="0.5"/>
+    <path d="M392 120L367 145L382 130L397 145L392 120Z" fill="white" fill-opacity="0.5"/>
+    <path d="M120 392L145 367L130 382L115 367L120 392Z" fill="white" fill-opacity="0.5"/>
+    <path d="M392 392L367 367L382 382L397 367L392 392Z" fill="white" fill-opacity="0.5"/>
+
+    <!-- Central book/Quran symbol -->
+    <rect x="156" y="166" width="200" height="180" rx="12" fill="white" fill-opacity="0.15" stroke="white" stroke-width="4"/>
+
+    <!-- Book spine -->
+    <line x1="256" y1="166" x2="256" y2="346" stroke="white" stroke-width="4"/>
+
+    <!-- Left page lines -->
+    <line x1="176" y1="196" x2="236" y2="196" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="176" y1="226" x2="236" y2="226" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="176" y1="256" x2="236" y2="256" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="176" y1="286" x2="236" y2="286" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="176" y1="316" x2="236" y2="316" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Right page lines -->
+    <line x1="276" y1="196" x2="336" y2="196" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="276" y1="226" x2="336" y2="226" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="276" y1="256" x2="336" y2="256" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="276" y1="286" x2="336" y2="286" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="276" y1="316" x2="336" y2="316" stroke="white" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Decorative crescents in corners -->
+    <path d="M100 140 A40 40 0 0 1 140 100" stroke="white" stroke-opacity="0.3" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M412 140 A40 40 0 0 0 372 100" stroke="white" stroke-opacity="0.3" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M100 372 A40 40 0 0 0 140 412" stroke="white" stroke-opacity="0.3" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M412 372 A40 40 0 0 1 372 412" stroke="white" stroke-opacity="0.3" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+    <defs>
+        <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#10b981"/>
+            <stop offset="50%" stop-color="#059669"/>
+            <stop offset="100%" stop-color="#064e3b"/>
+        </linearGradient>
+    </defs>
+</svg>
