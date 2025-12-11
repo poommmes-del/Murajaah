@@ -916,4 +916,555 @@ if ('serviceWorker' in navigator) {
                     }
                 });
             });
+        } catch (error) {
+            console.error('❌ Service Worker erreur:', error);
+        }
+    });
+    
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+    });
+}
+
+// ==========================================
+// PWA INSTALL PROMPT
+// ==========================================
+let deferredPrompt = null;
+const installPromptEl = document.getElementById('installPrompt');
+const installBtn = document.getElementById('installBtn');
+const dismissInstall = document.getElementById('dismissInstall');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    const dismissed = localStorage.getItem('installDismissed');
+    if (dismissed && Date.now() - parseInt(dismissed) < 24 * 60 * 60 * 1000) return;
+    
+    setTimeout(() => {
+        if (deferredPrompt) installPromptEl.classList.add('show');
+    }, 3000);
+});
+
+installBtn?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    installPromptEl.classList.remove('show');
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Installation:', outcome);
+    deferredPrompt = null;
+});
+
+dismissInstall?.addEventListener('click', () => {
+    installPromptEl.classList.remove('show');
+    localStorage.setItem('installDismissed', Date.now().toString());
+});
+
+window.addEventListener('appinstalled', () => {
+    installPromptEl.classList.remove('show');
+    deferredPrompt = null;
+});
+
+// ==========================================
+// OFFLINE DETECTION
+// ==========================================
+const offlineBanner = document.getElementById('offlineBanner');
+
+function updateOnlineStatus() {
+    if (!navigator.onLine) {
+        offlineBanner.classList.add('show');
+    } else {
+        offlineBanner.classList.remove('show');
+    }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ==========================================
+// HIDE SPLASH SCREEN
+// ==========================================
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        document.getElementById('splash').classList.add('hidden');
+    }, 1500);
+});
+
+// ==========================================
+// VUE.JS APPLICATION
+// ==========================================
+const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+const API = {
+    surahList: 'https://api.alquran.cloud/v1/surah',
+    juz: (n) => `https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`,
+    ayahAr: (s, a) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/quran-uthmani`,
+    ayahTr: (s, a, ed) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`,
+    ayahAudio: (s, a, ed) => `https://api.alquran.cloud/v1/ayah/${s}:${a}/${ed}`
+};
+
+// ==========================================
+// CACHE UTILITIES - CORRIGÉ
+// ==========================================
+const CACHE_PREFIX = 'murajaah_';
+const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
+
+// Fonction de hash simple pour créer des clés uniques
+function hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return 'h' + Math.abs(hash).toString(36);
+}
+
+function getCached(key) {
+    try {
+        const item = localStorage.getItem(CACHE_PREFIX + key);
+        if (!item) return null;
+        const { data, timestamp } = JSON.parse(item);
+        if (Date.now() - timestamp > CACHE_EXPIRY) {
+            localStorage.removeItem(CACHE_PREFIX + key);
+            return null;
+        }
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function setCache(key, data) {
+    try {
+        localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
+            data,
+            timestamp: Date.now()
+        }));
+    } catch (e) {
+        clearOldCache();
+        try {
+            localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
+                data,
+                timestamp: Date.now()
+            }));
+        } catch (e2) {
+            console.warn('Cache storage full');
+        }
+    }
+}
+
+function clearOldCache() {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
+    const items = keys.map(k => {
+        try {
+            return { key: k, timestamp: JSON.parse(localStorage.getItem(k))?.timestamp || 0 };
+        } catch {
+            return { key: k, timestamp: 0 };
+        }
+    }).sort((a, b) => a.timestamp - b.timestamp);
+    
+    const toRemove = Math.ceil(items.length * 0.3);
+    items.slice(0, toRemove).forEach(item => localStorage.removeItem(item.key));
+}
+
+async function fetchSafe(url) {
+    // Utiliser un hash de l'URL complète comme clé
+    const cacheKey = hashCode(url);
+    const cached = getCached(cacheKey);
+    if (cached) {
+        console.log('📦 Cache hit:', url.slice(-30));
+        return cached;
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+            const data = await response.json();
+            setCache(cacheKey, data);
+            return data;
+        }
+        throw new Error(`HTTP ${response.status}`);
+    } catch (e) {
+        console.warn('Fetch error:', e.message);
+        
+        // Essayer les proxies
+        const proxies = [
+            (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+            (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`
+        ];
+        
+        for (const proxy of proxies) {
+            try {
+                const response = await fetch(proxy(url));
+                if (response.ok) {
+                    const data = await response.json();
+                    setCache(cacheKey, data);
+                    return data;
+                }
+            } catch (_) {}
+        }
+        
+        // Dernier recours: cache expiré
+        const expiredItem = localStorage.getItem(CACHE_PREFIX + cacheKey);
+        if (expiredItem) {
+            try {
+                console.log('📦 Using expired cache');
+                return JSON.parse(expiredItem).data;
+            } catch {}
+        }
+        
+        throw e;
+    }
+}
+
+// ==========================================
+// VUE APP
+// ==========================================
+createApp({
+    setup() {
+        const view = ref('config');
+        const mode = ref('surah');
+        const loading = ref(false);
+        const isOffline = ref(!navigator.onLine);
+        const surahList = ref([]);
+        const selectedSurahs = ref([]);
+        const selectedJuz = ref([]);
+        const searchQuery = ref('');
+        const cacheSize = ref('');
+
+        // Settings
+        const savedSettings = localStorage.getItem('murajaah_settings');
+        const defaultSettings = { reciter: 'ar.alafasy', translation: 'none' };
+        const settings = ref(savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings);
+
+        // Load saved selections
+        try {
+            const savedSurahs = localStorage.getItem('murajaah_selectedSurahs');
+            const savedJuz = localStorage.getItem('murajaah_selectedJuz');
+            if (savedSurahs) selectedSurahs.value = JSON.parse(savedSurahs);
+            if (savedJuz) selectedJuz.value = JSON.parse(savedJuz);
+        } catch {}
+
+        const pool = ref([]);
+        const history = ref([]);
+        const sessionCount = ref(0);
+        const currentKey = ref(null);
+        const currentData = ref({ arabic: '', tr: '', audio: '' });
+        const reveal = ref(false);
+        const isPlaying = ref(false);
+        const audioPlayer = ref(null);
+        const chunkData = ref([]);
+        const chunkSize = 3;
+        const chunkCursor = ref(0);
+
+        const filteredSurahs = computed(() => {
+            if (!searchQuery.value) return surahList.value;
+            const q = searchQuery.value.toLowerCase();
+            return surahList.value.filter(s =>
+                s.nameEn.toLowerCase().includes(q) ||
+                s.nameAr.includes(q) ||
+                String(s.number).includes(q)
+            );
+        });
+
+        const poolSize = computed(() => {
+            if (mode.value === 'surah') {
+                return selectedSurahs.value.reduce((acc, sNum) => {
+                    const s = surahList.value.find(x => x.number === sNum);
+                    return acc + (s ? Math.max(0, s.numberOfAyahs - 1) : 0);
+                }, 0);
+            } else {
+                return selectedJuz.value.length * 200;
+            }
+        });
+
+        const currentAudioUrl = computed(() => currentData.value.audio);
+        
+        const hasMoreChunk = computed(() => {
+            if (!currentKey.value) return false;
+            const [s] = currentKey.value.split(':').map(Number);
+            const meta = surahList.value.find(x => x.number === s);
+            if (!meta) return false;
+            return chunkCursor.value <= meta.numberOfAyahs;
+        });
+
+        // Watchers
+        watch(selectedSurahs, (val) => {
+            localStorage.setItem('murajaah_selectedSurahs', JSON.stringify(val));
+        }, { deep: true });
+
+        watch(selectedJuz, (val) => {
+            localStorage.setItem('murajaah_selectedJuz', JSON.stringify(val));
+        }, { deep: true });
+
+        function saveSettings() {
+            localStorage.setItem('murajaah_settings', JSON.stringify(settings.value));
+        }
+
+        function updateCacheSize() {
+            let total = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key) && key.startsWith(CACHE_PREFIX)) {
+                    total += localStorage.getItem(key).length;
+                }
+            }
+            const kb = (total / 1024).toFixed(1);
+            cacheSize.value = kb > 1000 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
+        }
+
+        onMounted(async () => {
+            window.addEventListener('online', () => { isOffline.value = false; });
+            window.addEventListener('offline', () => { isOffline.value = true; });
+
+            // Load surah list
+            const cached = localStorage.getItem('surahList');
+            if (cached) {
+                try { surahList.value = JSON.parse(cached); } catch {}
+            }
+            
+            if (!surahList.value.length) {
+                try {
+                    const res = await fetchSafe(API.surahList);
+                    surahList.value = res.data.map(x => ({
+                        number: x.number,
+                        nameAr: x.name.short || x.name,
+                        nameEn: x.name.transliteration?.en || x.englishName,
+                        numberOfAyahs: x.numberOfVerses || x.numberOfAyahs
+                    }));
+                    localStorage.setItem('surahList', JSON.stringify(surahList.value));
+                } catch (e) {
+                    console.error('Failed to load surahs:', e);
+                }
+            }
+            
+            updateCacheSize();
+            window.addEventListener('keydown', handleKey);
+        });
+
+        function handleKey(e) {
+            if (view.value !== 'card') return;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleAudio();
+            } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+                if (reveal.value) nextCard();
+                else revealCard();
+            }
+        }
+
+        function toggleAll(on) {
+            if (mode.value === 'surah') {
+                selectedSurahs.value = on ? surahList.value.map(s => s.number) : [];
+            } else {
+                selectedJuz.value = on ? Array.from({ length: 30 }, (_, i) => i + 1) : [];
+            }
+        }
+
+        async function startRevision() {
+            loading.value = true;
+            pool.value = [];
+
+            if (mode.value === 'surah') {
+                for (const s of selectedSurahs.value) {
+                    const meta = surahList.value.find(x => x.number === s);
+                    if (!meta) continue;
+                    for (let i = 1; i < meta.numberOfAyahs; i++) {
+                        pool.value.push(`${s}:${i}`);
+                    }
+                }
+            } else {
+                for (const j of selectedJuz.value) {
+                    try {
+                        const res = await fetchSafe(API.juz(j));
+                        const ayahs = res.data.ayahs;
+                        ayahs.forEach(a => {
+                            const meta = surahList.value.find(x => x.number === a.surah.number);
+                            if (!meta) { 
+                                pool.value.push(`${a.surah.number}:${a.numberInSurah}`); 
+                                return; 
+                            }
+                            if (a.numberInSurah < meta.numberOfAyahs) {
+                                pool.value.push(`${a.surah.number}:${a.numberInSurah}`);
+                            }
+                        });
+                    } catch (e) {
+                        console.error(`Error loading Juz ${j}:`, e);
+                    }
+                }
+            }
+            
+            pool.value.sort(() => Math.random() - 0.5);
+            view.value = 'card';
+            loading.value = false;
+            await nextCard();
+        }
+
+        function returnToHome() {
+            view.value = 'config';
+            reveal.value = false;
+            isPlaying.value = false;
+            if (audioPlayer.value) audioPlayer.value.pause();
+            updateCacheSize();
+        }
+
+        function getSurahName(key) {
+            if (!key) return '';
+            const [s] = key.split(':');
+            const meta = surahList.value.find(x => x.number == s);
+            return meta ? meta.nameEn : '';
+        }
+
+        function getAyahNumber(key) {
+            if (!key) return '';
+            const parts = key.split(':');
+            return parts.length > 1 ? parts[1] : '';
+        }
+
+        async function nextCard() {
+            reveal.value = false;
+            chunkData.value = [];
+            isPlaying.value = false;
+            currentData.value = { arabic: '', tr: '', audio: '' };
+
+            if (!pool.value.length) return;
+            
+            let candidateIndex = Math.floor(Math.random() * pool.value.length);
+            let retries = 0;
+            while (retries < 10 && history.value.slice(-10).includes(pool.value[candidateIndex])) {
+                candidateIndex = Math.floor(Math.random() * pool.value.length);
+                retries++;
+            }
+
+            currentKey.value = pool.value[candidateIndex];
+            history.value.push(currentKey.value);
+            sessionCount.value++;
+
+            loading.value = true;
+            try {
+                const [s, a] = currentKey.value.split(':').map(Number);
+                
+                // Charger le verset actuel
+                const newData = { arabic: '', tr: '', audio: '' };
+                await loadAyahData(s, a, newData);
+                currentData.value = newData;
+                
+                // Le curseur pour les versets suivants commence APRÈS le verset actuel
+                chunkCursor.value = a + 1;
+                
+                console.log(`📖 Loaded ${s}:${a}, next chunk starts at ${chunkCursor.value}`);
+            } catch (e) {
+                currentData.value.arabic = 'Erreur de chargement.';
+                console.error('Error loading verse:', e);
+            }
+            loading.value = false;
+
+            // Auto-play
+            if (currentAudioUrl.value && audioPlayer.value) {
+                await nextTick();
+                setTimeout(() => {
+                    if (audioPlayer.value && view.value === 'card') {
+                        audioPlayer.value.play().catch(() => {});
+                    }
+                }, 300);
+            }
+        }
+
+        async function loadAyahData(surah, ayah, targetObj) {
+            console.log(`🔄 Loading ${surah}:${ayah}`);
+            
+            const pAr = fetchSafe(API.ayahAr(surah, ayah));
+            const pTr = settings.value.translation !== 'none'
+                ? fetchSafe(API.ayahTr(surah, ayah, settings.value.translation))
+                : Promise.resolve(null);
+            const pAu = fetchSafe(API.ayahAudio(surah, ayah, settings.value.reciter));
+
+            const [ar, tr, au] = await Promise.all([pAr, pTr, pAu]);
+            
+            targetObj.arabic = ar?.data?.text || 'Texte indisponible';
+            targetObj.tr = tr?.data?.text || '';
+            targetObj.audio = au?.data?.audio || '';
+            
+            console.log(`✅ Loaded ${surah}:${ayah} - "${targetObj.arabic.slice(0, 30)}..."`);
+        }
+
+        async function revealCard() {
+            reveal.value = true;
+            loading.value = true;
+            await loadNextChunk();
+            loading.value = false;
+        }
+
+        async function loadNextChunk() {
+            if (!currentKey.value) return;
+            
+            const [surah] = currentKey.value.split(':').map(Number);
+            const meta = surahList.value.find(x => x.number === surah);
+            if (!meta) return;
+            
+            const maxAyah = meta.numberOfAyahs;
+            const startAyah = chunkCursor.value;
+            
+            if (startAyah > maxAyah) {
+                console.log('No more verses in this surah');
+                return;
+            }
+            
+            const endAyah = Math.min(maxAyah, startAyah + chunkSize - 1);
+            
+            console.log(`📚 Loading chunk: ${surah}:${startAyah}-${endAyah}`);
+            
+            const promises = [];
+            for (let i = startAyah; i <= endAyah; i++) {
+                // Créer un nouvel objet pour chaque verset
+                const item = { 
+                    ayah: i, 
+                    surahName: meta.nameEn, 
+                    arabic: 'Chargement...', 
+                    tr: '' 
+                };
+                chunkData.value.push(item);
+                
+                // Charger les données de manière asynchrone
+                promises.push(
+                    loadAyahData(surah, i, item).catch(e => {
+                        console.error(`Error loading ${surah}:${i}`, e);
+                        item.arabic = 'Erreur de chargement';
+                    })
+                );
+            }
+
+            chunkCursor.value = endAyah + 1;
+            await Promise.all(promises);
+        }
+
+        function toggleAudio() {
+            if (!audioPlayer.value) return;
+            if (audioPlayer.value.paused) audioPlayer.value.play();
+            else audioPlayer.value.pause();
+        }
+        
+        function audioEnded() { 
+            isPlaying.value = false; 
+        }
+
+        return {
+            view, mode, loading, isOffline, surahList, filteredSurahs, 
+            selectedSurahs, selectedJuz, searchQuery, settings, poolSize, 
+            sessionCount, currentData, currentAudioUrl, reveal, isPlaying,
+            chunkData, hasMoreChunk, audioPlayer, currentKey, cacheSize,
+            toggleAll, startRevision, returnToHome, nextCard, revealCard, 
+            loadNextChunk, toggleAudio, audioEnded, getSurahName, getAyahNumber, 
+            saveSettings
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
