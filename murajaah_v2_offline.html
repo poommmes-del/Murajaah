@@ -2,11 +2,14 @@
 <html lang="fr" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Murajaah — Révision Élégante</title>
-
-    <link rel="manifest" href="/manifest.json">
+    
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#020617">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,13 +25,13 @@
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        kufi: ['Reem Kufi', 'sans-serif'], // Pour les titres
-                        quran: ['Scheherazade New', 'serif'], // Pour le texte arabe
+                        kufi: ['Reem Kufi', 'sans-serif'],
+                        quran: ['Scheherazade New', 'serif'],
                     },
                     colors: {
                         primary: {
                             400: '#34d399',
-                            500: '#10b981', // Emerald 500
+                            500: '#10b981',
                             600: '#059669',
                             800: '#065f46',
                             900: '#064e3b',
@@ -53,13 +56,11 @@
     </script>
 
     <style>
-        /* Custom Scrollbar plus subtile */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #10b981; }
 
-        /* Optimisation texte arabe */
         .arabic-text {
             line-height: 2.5;
             direction: rtl;
@@ -73,6 +74,9 @@
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
+        
+        /* Empêcher le pull-to-refresh sur mobile pour une sensation native */
+        body { overscroll-behavior-y: none; }
     </style>
 </head>
 <body class="bg-night-950 text-slate-200 h-screen overflow-hidden flex flex-col font-sans selection:bg-primary-500 selection:text-white">
@@ -82,11 +86,8 @@
     <header class="flex justify-between items-center px-6 py-5 border-b border-white/5 bg-night-950/50 backdrop-blur-md z-20 shrink-0">
         <div class="flex items-center gap-4 cursor-pointer group" @click="returnToHome">
             <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-900 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.25)] border border-white/10 group-hover:scale-105 transition-transform duration-300">
+                <img src="icon.png" class="w-8 h-8 object-contain" alt="Logo" onerror="this.style.display='none'">
                 <div class="absolute inset-0 rounded-2xl bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2L14.5 4.5L12 7L9.5 4.5L12 2Z" fill="currentColor" fill-opacity="0.2"/> <path d="M12 22L9.5 19.5L12 17L14.5 19.5L12 22Z" fill="currentColor" fill-opacity="0.2"/> <path d="M22 12L19.5 14.5L17 12L19.5 9.5L22 12Z"/> <path d="M2 12L4.5 9.5L7 12L4.5 14.5L2 12Z"/> <rect x="7" y="7" width="10" height="10" rx="1" stroke-width="1.5"/>
-                    <circle cx="12" cy="12" r="2" fill="currentColor"/>
-                </svg>
             </div>
             <div class="flex flex-col">
                 <h1 class="text-2xl font-kufi font-bold tracking-wide text-primary-400 leading-none group-hover:text-primary-300 transition-colors">Murajaah</h1>
@@ -95,10 +96,13 @@
         </div>
 
         <div class="flex items-center gap-3">
-             <div v-if="view === 'card'" class="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 text-xs text-slate-400 font-medium">
-                <span class="opacity-60">Raccourcis :</span>
-                <kbd class="bg-white/10 px-2 py-0.5 rounded text-slate-200 border border-white/10">Espace</kbd>
-                <kbd class="bg-white/10 px-2 py-0.5 rounded text-slate-200 border border-white/10">→</kbd>
+             <div v-if="!isOnline" class="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] text-red-400 font-bold uppercase tracking-wider">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                Offline
+             </div>
+             <div v-else-if="isCaching" class="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] text-blue-400 font-bold uppercase tracking-wider">
+                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Mise en cache
              </div>
         </div>
     </header>
@@ -112,7 +116,6 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 md:grid-rows-[min-content_1fr] gap-6 h-auto md:h-full min-h-0 pb-6">
-
                 <div class="md:col-span-4 order-1 p-6 rounded-3xl glass-panel h-fit">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Mode</label>
                     <div class="flex bg-black/40 p-1.5 rounded-xl">
@@ -140,7 +143,7 @@
                                 :class="selectedSurahs.includes(s.number) ? 'bg-primary-900/30 border-primary-500/30' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'">
                                 <input type="checkbox" :value="s.number" v-model="selectedSurahs" class="hidden">
                                 <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 font-kufi"
-                                    :class="selectedSurahs.includes(s.number) ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-white/10 text-slate-500 group-hover:bg-white/20'">
+                                     :class="selectedSurahs.includes(s.number) ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-white/10 text-slate-500 group-hover:bg-white/20'">
                                     {{ s.number }}
                                 </div>
                                 <div class="flex flex-col min-w-0">
@@ -244,43 +247,36 @@
 
                         <div class="w-full text-center relative py-8">
                              <span class="absolute top-0 left-0 text-6xl text-white/5 font-serif">“</span>
-                            <span class="absolute bottom-0 right-0 text-6xl text-white/5 font-serif">”</span>
+                             <span class="absolute bottom-0 right-0 text-6xl text-white/5 font-serif">”</span>
 
                             <p class="text-4xl sm:text-5xl md:text-6xl font-quran text-white leading-[2.2] tracking-wide filter drop-shadow-lg" dir="rtl">
                                 {{ currentData?.arabic }}
                             </p>
                         </div>
 
-                        <div v-if="currentAudioUrl" class="w-full max-w-md mt-6 mb-8 bg-black/20 p-2 rounded-xl border border-white/5">
-                            <audio
-                                ref="audioPlayer"
-                                :src="currentAudioUrl"
-                                class="w-full h-8 opacity-80 hover:opacity-100 transition-opacity"
-                                controls
-                                @play="isPlaying = true"
-                                @pause="isPlaying = false"
-                                @ended="audioEnded"
-                            ></audio>
-                        </div>
+                        <audio ref="audioPlayer" :src="currentAudioUrl" class="hidden"
+                               @play="isPlaying = true" 
+                               @pause="isPlaying = false" 
+                               @ended="audioEnded">
+                        </audio>
 
                         <div v-if="reveal" class="w-full animate-fade-in space-y-8 mt-4 pb-20">
 
                             <div v-if="currentData.tr" class="text-center mx-auto max-w-2xl">
                                 <p class="text-base sm:text-lg text-slate-300 font-light leading-relaxed italic">
-                                    {{ currentData.tr }}
+                                     {{ currentData.tr }}
                                 </p>
                                 <div class="w-16 h-1 bg-primary-500/30 mx-auto mt-6 rounded-full"></div>
                             </div>
 
                             <div v-if="chunkData.length" class="space-y-4 w-full">
                                 <div class="flex items-center gap-4 py-2">
-                                    <span class="text-xs font-bold text-primary-400 uppercase tracking-widest">La suite</span>
+                                     <span class="text-xs font-bold text-primary-400 uppercase tracking-widest">La suite</span>
                                     <div class="h-px bg-white/10 flex-1"></div>
                                 </div>
 
                                 <div class="grid gap-4">
-                                    <div
-                                        v-for="c in chunkData"
+                                    <div v-for="c in chunkData"
                                         :key="c.ayah"
                                         class="bg-black/20 hover:bg-black/30 border border-white/5 hover:border-primary-500/20 rounded-2xl p-6 transition-colors duration-300 group"
                                     >
@@ -301,11 +297,8 @@
                                 </div>
 
                                 <div class="flex justify-center pt-4">
-                                    <button
-                                        v-if="hasMoreChunk"
-                                        @click="loadNextChunk"
-                                        class="text-xs flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors"
-                                    >
+                                     <button v-if="hasMoreChunk" @click="loadNextChunk"
+                                        class="text-xs flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors">
                                         <span>Charger la suite</span>
                                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                     </button>
@@ -318,28 +311,36 @@
                 </div>
 
                 <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-night-950 via-night-950/95 to-transparent z-10 flex justify-center">
-                    <div class="w-full max-w-lg">
-                        <div v-if="reveal" class="flex gap-4 animate-fade-in">
-                            <button
-                                @click="nextCard"
-                                class="flex-1 bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/20 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3"
-                            >
+                    <div class="w-full max-w-lg flex items-stretch gap-3">
+                        
+                        <button v-if="currentAudioUrl" @click="toggleAudio"
+                            class="shrink-0 w-16 rounded-2xl flex items-center justify-center transition-all shadow-lg border border-white/10 group focus:outline-none"
+                            :class="isPlaying ? 'bg-primary-500 text-white shadow-primary-500/30' : 'bg-white/10 backdrop-blur-md text-primary-400 hover:bg-white/20 hover:border-white/20'">
+                            
+                            <svg v-if="!isPlaying" class="w-8 h-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            <svg v-else class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                            </svg>
+                        </button>
+
+                        <div class="flex-1 animate-fade-in">
+                            <button v-if="reveal" @click="nextCard"
+                                class="w-full h-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/20 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3">
                                 <span>Verset Suivant</span>
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
                             </button>
-                        </div>
 
-                        <div v-else class="w-full">
-                            <button
-                                @click="revealCard"
-                                class="w-full bg-white/10 hover:bg-white/15 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 transition-all hover:border-white/20 flex flex-col items-center group"
-                            >
+                            <button v-else @click="revealCard"
+                                class="w-full h-full bg-white/10 hover:bg-white/15 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 transition-all hover:border-white/20 flex flex-col items-center justify-center group">
                                 <span class="text-sm font-bold tracking-widest uppercase mb-1">Révéler la suite</span>
                                 <svg class="w-4 h-4 text-slate-400 group-hover:translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
                         </div>
+
                     </div>
                 </div>
 
@@ -349,14 +350,13 @@
     </main>
 
     <footer class="py-4 text-center text-[10px] text-slate-600 font-medium tracking-wide shrink-0">
-            MURAJAAH v1.0 &bull; Données AlQuran.cloud &bull;
+            MURAJAAH v1.1 &bull; PWA Enabled &bull;
     </footer>
 
 </div>
 
 <script>
     const { createApp, ref, computed, onMounted } = Vue;
-
     const API = {
         alquran: {
             surahList: 'https://api.alquran.cloud/v1/surah',
@@ -371,8 +371,10 @@
         (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
         (url) => `https://thingproxy.freeboard.io/fetch/${url}`
     ];
-
+    
+    // Fonction fetch améliorée pour utiliser le cache SW
     async function fetchSafe(url) {
+        // En mode PWA, le fetch standard est intercepté par le Service Worker qui gère le cache
         try {
             const r = await fetch(url);
             if (r.ok) return r.json();
@@ -397,10 +399,8 @@
             const selectedSurahs = ref([]);
             const selectedJuz = ref([]);
             const searchQuery = ref('');
-
-            // MODIFICATION: Translation par défaut sur 'none' (Arabe seul)
             const settings = ref({ reciter: 'ar.alafasy', translation: 'none' });
-
+            
             const pool = ref([]);
             const history = ref([]);
             const sessionCount = ref(0);
@@ -412,6 +412,13 @@
             const chunkData = ref([]);
             const chunkSize = 3;
             const chunkCursor = ref(0);
+            
+            // PWA States
+            const isOnline = ref(navigator.onLine);
+            const isCaching = ref(false);
+
+            window.addEventListener('online', () => isOnline.value = true);
+            window.addEventListener('offline', () => isOnline.value = false);
 
             const filteredSurahs = computed(() => {
                 if (!searchQuery.value) return surahList.value;
@@ -445,6 +452,17 @@
             });
 
             onMounted(async () => {
+                // Enregistrer le Service Worker
+                if ('serviceWorker' in navigator) {
+                    try {
+                        await navigator.serviceWorker.register('./sw.js');
+                        console.log('SW Registered');
+                    } catch (e) {
+                        console.log('SW Fail', e);
+                    }
+                }
+
+                // Charger liste Sourates (Localstorage first)
                 const cached = localStorage.getItem('surahList');
                 if (cached) {
                     surahList.value = JSON.parse(cached);
@@ -497,7 +515,8 @@
                         }
                     }
                 } else {
-                    for (const j of selectedJuz.value) {
+                    // Logic Juz inchangée
+                     for (const j of selectedJuz.value) {
                         try {
                             const res = await fetchSafe(API.alquran.juz(j));
                             const ayahs = res.data.ayahs;
@@ -514,7 +533,40 @@
                 pool.value.sort(() => Math.random() - 0.5);
                 view.value = 'card';
                 loading.value = false;
+                
+                // Démarrer la mise en cache background
+                backgroundCache();
+                
                 nextCard();
+            }
+
+            // FONCTION INTELLIGENTE DE CACHING EN ARRIERE PLAN
+            async function backgroundCache() {
+                if (!navigator.onLine || pool.value.length === 0) return;
+                isCaching.value = true;
+                
+                // On prend les 20 prochains éléments du pool mélangé pour les pré-charger
+                // On ne charge pas tout d'un coup pour éviter le ban API
+                const itemsToCache = pool.value.slice(0, 20); 
+
+                for (const key of itemsToCache) {
+                    const [s, a] = key.split(':');
+                    // Simuler des fetchs. Le Service Worker va automatiquement les intercepter et les cacher.
+                    try {
+                        // Fetch Audio
+                        fetch(API.alquran.ayahAudio(s, a, settings.value.reciter));
+                        // Fetch Texte Arabe
+                        fetch(API.alquran.ayahAr(s, a));
+                        // Fetch Traduction si besoin
+                        if (settings.value.translation !== 'none') {
+                            fetch(API.alquran.ayahTr(s, a, settings.value.translation));
+                        }
+                        
+                        // Petite pause pour être gentil avec l'API
+                        await new Promise(r => setTimeout(r, 100)); 
+                    } catch (e) {}
+                }
+                isCaching.value = false;
             }
 
             function returnToHome() {
@@ -544,7 +596,6 @@
                 currentData.value = { arabic: '', tr: '', audio: '' };
 
                 if (!pool.value.length) return;
-
                 let candidateIndex = Math.floor(Math.random() * pool.value.length);
                 let retries = 0;
                 while (retries < 5 && history.value.slice(-5).includes(pool.value[candidateIndex])) {
@@ -556,15 +607,46 @@
                 history.value.push(currentKey.value);
                 sessionCount.value++;
 
+                // Fallback LocalStorage pour données texte si offline complet sans cache SW
+                const offlineKey = `offline_txt_${currentKey.value}`;
+
                 loading.value = true;
                 try {
                     const [s, a] = currentKey.value.split(':');
                     await loadAyahData(s, a, currentData.value);
+                    
+                    // Sauvegarde de secours du texte dans LocalStorage
+                    localStorage.setItem(offlineKey, JSON.stringify(currentData.value));
+
                     chunkCursor.value = parseInt(a, 10) + 1;
                 } catch (e) {
-                    currentData.value.arabic = 'Erreur de chargement.';
+                    // Essai de récupération LocalStorage si network fail
+                    const saved = localStorage.getItem(offlineKey);
+                    if (saved) {
+                        currentData.value = JSON.parse(saved);
+                    } else {
+                        currentData.value.arabic = 'Erreur connexion / Non caché';
+                    }
                 }
                 loading.value = false;
+
+                if (currentAudioUrl.value) {
+                    setTimeout(() => {
+                        if(audioPlayer.value && view.value === 'card') {
+                            audioPlayer.value.play().catch(e => {
+                                console.log("Autoplay bloqué");
+                            });
+                        }
+                    }, 300);
+                }
+                
+                // Déclencher un mini cache préventif pour la suite (prochain hasard)
+                // On prend quelques items au hasard dans le pool restant pour les charger
+                if(navigator.onLine) {
+                     const randomNext = pool.value[Math.floor(Math.random() * pool.value.length)];
+                     const [ns, na] = randomNext.split(':');
+                     fetch(API.alquran.ayahAudio(ns, na, settings.value.reciter));
+                }
             }
 
             async function loadAyahData(s, a, targetObj) {
@@ -582,7 +664,6 @@
 
             async function revealCard() {
                 reveal.value = true;
-                // Immédiatement charger le chunk suivant
                 loading.value = true;
                 await loadNextChunk();
                 loading.value = false;
@@ -594,12 +675,10 @@
                 const currentStart = chunkCursor.value;
                 const meta = surahList.value.find(x => x.number === s);
                 if (!meta) return;
-
                 const maxAyah = meta.numberOfAyahs;
                 const limit = Math.min(maxAyah, currentStart + chunkSize - 1);
 
                 if (currentStart > maxAyah) return;
-
                 const promises = [];
                 for (let i = currentStart; i <= limit; i++) {
                     const item = { ayah: i, surahName: meta.nameEn, arabic: '...', tr: '' };
@@ -622,26 +701,12 @@
                 view, mode, loading, surahList, filteredSurahs, selectedSurahs, selectedJuz, searchQuery,
                 settings, poolSize, sessionCount, currentData, currentAudioUrl, reveal, isPlaying,
                 chunkData, hasMoreChunk, audioPlayer, currentKey,
-                toggleAll, startRevision, returnToHome, nextCard, revealCard, loadNextChunk, toggleAudio, audioEnded, getSurahName, getAyahNumber
+                toggleAll, startRevision, returnToHome, nextCard, revealCard, loadNextChunk, toggleAudio, 
+                audioEnded, getSurahName, getAyahNumber,
+                isOnline, isCaching
             };
         }
     }).mount('#app');
 </script>
-
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            // Assurez-vous que sw.js est bien dans le répertoire racine
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => {
-                    console.log('Service Worker enregistré. Scope: ', reg.scope);
-                })
-                .catch(err => {
-                    console.log('Service Worker échec de l\'enregistrement: ', err);
-                });
-        });
-    }
-</script>
-
 </body>
 </html>
