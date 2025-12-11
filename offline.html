@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Murajaah - Hors ligne</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #10b981, #065f46);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2);
+        }
+        
+        .icon svg {
+            width: 60px;
+            height: 60px;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        p {
+            color: #94a3b8;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 10px;
+            color: #fbbf24;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                <path d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9" stroke-linecap="round"/>
+            </svg>
+        </div>
+        
+        <h1>Connexion perdue</h1>
+        
+        <p>
+            Vous êtes actuellement hors ligne. Vérifiez votre connexion internet et réessayez.
+        </p>
+        
+        <button onclick="window.location.reload()">
+            🔄 Réessayer
+        </button>
+        
+        <div class="status" id="status">
+            ⚡ Mode hors ligne
+        </div>
+    </div>
+    
+    <script>
+        // Détecter quand on revient en ligne
+        window.addEventListener('online', () => {
+            document.getElementById('status').innerHTML = '✅ Connexion rétablie !';
+            document.getElementById('status').style.background = 'rgba(16, 185, 129, 0.1)';
+            document.getElementById('status').style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            document.getElementById('status').style.color = '#10b981';
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
