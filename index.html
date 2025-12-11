@@ -16,23 +16,19 @@
     <meta name="msapplication-TileColor" content="#10b981">
     <meta name="msapplication-navbutton-color" content="#10b981">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA Manifest - CHEMIN RELATIF -->
+    <link rel="manifest" href="./manifest.json">
     
-    <!-- Icons pour iOS -->
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+    <!-- Icons pour iOS - CHEMINS RELATIFS -->
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="./icons/icon-167.png">
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
-    
-    <!-- Splash screens iOS -->
-    <link rel="apple-touch-startup-image" href="icons/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px)">
-    <link rel="apple-touch-startup-image" href="icons/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px)">
-    <link rel="apple-touch-startup-image" href="icons/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px)">
+    <!-- Favicon - CHEMINS RELATIFS -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-16.png">
+    <link rel="shortcut icon" href="./icons/icon-96.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,11 +108,12 @@
             align-items: center;
             justify-content: center;
             z-index: 9999;
-            transition: opacity 0.5s ease-out;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
         }
         
         .splash-screen.hidden {
             opacity: 0;
+            visibility: hidden;
             pointer-events: none;
         }
         
@@ -156,6 +153,8 @@
             bottom: 20px;
             left: 20px;
             right: 20px;
+            max-width: 400px;
+            margin: 0 auto;
             background: linear-gradient(135deg, #065f46, #064e3b);
             border-radius: 16px;
             padding: 16px;
@@ -167,6 +166,16 @@
         
         .install-prompt.show {
             transform: translateY(0);
+        }
+
+        /* Safe area pour iOS */
+        @supports (padding: max(0px)) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+            }
         }
     </style>
 </head>
@@ -420,7 +429,7 @@
                 <span v-if="reveal" class="font-kufi text-primary-400 animate-fade-in">
                     Sourate {{ getSurahName(currentKey) }} - Verset {{ getAyahNumber(currentKey) }}
                 </span>
-
+                <span v-else></span>
                 <span class="bg-white/5 px-3 py-1 rounded-full border border-white/5">{{ sessionCount }} versets révisés</span>
             </div>
 
@@ -543,66 +552,117 @@
     </main>
 
     <footer class="py-4 text-center text-[10px] text-slate-600 font-medium tracking-wide shrink-0">
-            MURAJAAH v1.0 &bull; Données AlQuran.cloud &bull; <span v-if="cacheSize">Cache: {{ cacheSize }}</span>
+            MURAJAAH v1.0 &bull; Données AlQuran.cloud <span v-if="cacheSize">&bull; Cache: {{ cacheSize }}</span>
     </footer>
 
 </div>
 
 <script>
-    // Service Worker Registration
+    // ==========================================
+    // SERVICE WORKER REGISTRATION
+    // ==========================================
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => {
-                    console.log('✅ Service Worker enregistré:', reg.scope);
-                })
-                .catch(err => {
-                    console.log('❌ Service Worker échec:', err);
+        window.addEventListener('load', async () => {
+            try {
+                // Utiliser un chemin relatif pour le SW
+                const registration = await navigator.serviceWorker.register('./sw.js', {
+                    scope: './'
                 });
+                
+                console.log('✅ Service Worker enregistré:', registration.scope);
+                
+                // Vérifier les mises à jour
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    console.log('🔄 Nouveau Service Worker en installation...');
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Nouvelle version disponible
+                            console.log('📦 Nouvelle version disponible');
+                            if (confirm('Une nouvelle version de Murajaah est disponible. Recharger maintenant ?')) {
+                                newWorker.postMessage('skipWaiting');
+                                window.location.reload();
+                            }
+                        }
+                    });
+                });
+                
+            } catch (error) {
+                console.error('❌ Erreur Service Worker:', error);
+            }
+        });
+        
+        // Recharger quand le SW prend le contrôle
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('🔄 Nouveau Service Worker actif, rechargement...');
+            window.location.reload();
         });
     }
 
-    // PWA Install Prompt
-    let deferredPrompt;
+    // ==========================================
+    // PWA INSTALL PROMPT
+    // ==========================================
+    let deferredPrompt = null;
     const installPrompt = document.getElementById('installPrompt');
     const installBtn = document.getElementById('installBtn');
     const dismissInstall = document.getElementById('dismissInstall');
 
     window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('📱 Install prompt disponible');
         e.preventDefault();
         deferredPrompt = e;
         
-        // Check if already dismissed
-        if (!localStorage.getItem('installDismissed')) {
-            setTimeout(() => {
-                installPrompt.classList.add('show');
-            }, 3000);
+        // Vérifier si déjà rejeté récemment (24h)
+        const dismissed = localStorage.getItem('installDismissed');
+        if (dismissed && Date.now() - parseInt(dismissed) < 24 * 60 * 60 * 1000) {
+            return;
         }
+        
+        // Afficher le prompt après 3 secondes
+        setTimeout(() => {
+            if (deferredPrompt) {
+                installPrompt.classList.add('show');
+            }
+        }, 3000);
     });
 
     installBtn?.addEventListener('click', async () => {
         if (!deferredPrompt) return;
         
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log('Install:', outcome);
-        deferredPrompt = null;
         installPrompt.classList.remove('show');
+        deferredPrompt.prompt();
+        
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('📱 Installation:', outcome);
+        
+        deferredPrompt = null;
     });
 
     dismissInstall?.addEventListener('click', () => {
         installPrompt.classList.remove('show');
-        localStorage.setItem('installDismissed', Date.now());
+        localStorage.setItem('installDismissed', Date.now().toString());
     });
 
-    // Offline detection
+    // Détecter si l'app est installée
+    window.addEventListener('appinstalled', () => {
+        console.log('✅ Application installée');
+        installPrompt.classList.remove('show');
+        deferredPrompt = null;
+    });
+
+    // ==========================================
+    // OFFLINE DETECTION
+    // ==========================================
     const offlineBanner = document.getElementById('offlineBanner');
     
     function updateOnlineStatus() {
         if (!navigator.onLine) {
             offlineBanner.classList.add('show');
+            console.log('📴 Hors ligne');
         } else {
             offlineBanner.classList.remove('show');
+            console.log('📶 En ligne');
         }
     }
 
@@ -610,13 +670,18 @@
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus();
 
-    // Hide splash screen
+    // ==========================================
+    // HIDE SPLASH SCREEN
+    // ==========================================
     window.addEventListener('load', () => {
         setTimeout(() => {
             document.getElementById('splash').classList.add('hidden');
         }, 1500);
     });
 
+    // ==========================================
+    // VUE.JS APPLICATION
+    // ==========================================
     const { createApp, ref, computed, onMounted, watch } = Vue;
     
     const API = {
@@ -634,9 +699,11 @@
         (url) => `https://thingproxy.freeboard.io/fetch/${url}`
     ];
 
-    // Cache utility functions
+    // ==========================================
+    // CACHE UTILITY FUNCTIONS
+    // ==========================================
     const CACHE_PREFIX = 'murajaah_';
-    const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+    const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 jours
 
     function getCached(key) {
         try {
@@ -660,19 +727,33 @@
                 timestamp: Date.now()
             }));
         } catch (e) {
-            // LocalStorage full, clear old items
+            // LocalStorage plein, nettoyer les anciens éléments
             clearOldCache();
+            try {
+                localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
+                    data,
+                    timestamp: Date.now()
+                }));
+            } catch (e2) {
+                console.warn('Cache storage full');
+            }
         }
     }
 
     function clearOldCache() {
         const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        const items = keys.map(k => ({
-            key: k,
-            timestamp: JSON.parse(localStorage.getItem(k))?.timestamp || 0
-        })).sort((a, b) => a.timestamp - b.timestamp);
+        const items = keys.map(k => {
+            try {
+                return {
+                    key: k,
+                    timestamp: JSON.parse(localStorage.getItem(k))?.timestamp || 0
+                };
+            } catch {
+                return { key: k, timestamp: 0 };
+            }
+        }).sort((a, b) => a.timestamp - b.timestamp);
         
-        // Remove oldest 20%
+        // Supprimer les 20% les plus anciens
         const toRemove = Math.ceil(items.length * 0.2);
         items.slice(0, toRemove).forEach(item => localStorage.removeItem(item.key));
     }
@@ -691,7 +772,7 @@
             }
             throw new Error('Direct fail');
         } catch (e) {
-            // Try proxies if direct fails
+            // Essayer les proxies si la requête directe échoue
             for (const wrap of PROXIES) {
                 try {
                     const r = await fetch(wrap(url));
@@ -703,16 +784,21 @@
                 } catch (_) {}
             }
             
-            // If all fails, check cache even if expired
-            const expiredCache = localStorage.getItem(CACHE_PREFIX + cacheKey);
-            if (expiredCache) {
-                return JSON.parse(expiredCache).data;
+            // Si tout échoue, vérifier le cache même expiré
+            const expiredItem = localStorage.getItem(CACHE_PREFIX + cacheKey);
+            if (expiredItem) {
+                try {
+                    return JSON.parse(expiredItem).data;
+                } catch {}
             }
             
             throw e;
         }
     }
 
+    // ==========================================
+    // VUE APP
+    // ==========================================
     createApp({
         setup() {
             const view = ref('config');
@@ -725,16 +811,20 @@
             const searchQuery = ref('');
             const cacheSize = ref('');
 
-            // Load settings from localStorage
+            // Charger les paramètres depuis localStorage
             const savedSettings = localStorage.getItem('murajaah_settings');
             const defaultSettings = { reciter: 'ar.alafasy', translation: 'none' };
             const settings = ref(savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings);
 
-            // Load saved selections
+            // Charger les sélections sauvegardées
             const savedSurahs = localStorage.getItem('murajaah_selectedSurahs');
             const savedJuz = localStorage.getItem('murajaah_selectedJuz');
-            if (savedSurahs) selectedSurahs.value = JSON.parse(savedSurahs);
-            if (savedJuz) selectedJuz.value = JSON.parse(savedJuz);
+            if (savedSurahs) {
+                try { selectedSurahs.value = JSON.parse(savedSurahs); } catch {}
+            }
+            if (savedJuz) {
+                try { selectedJuz.value = JSON.parse(savedJuz); } catch {}
+            }
 
             const pool = ref([]);
             const history = ref([]);
@@ -779,7 +869,7 @@
                 return chunkCursor.value <= maxAyah;
             });
 
-            // Watch for selection changes and save
+            // Observer les changements de sélection et sauvegarder
             watch(selectedSurahs, (val) => {
                 localStorage.setItem('murajaah_selectedSurahs', JSON.stringify(val));
             }, { deep: true });
@@ -795,7 +885,7 @@
             function updateCacheSize() {
                 let total = 0;
                 for (let key in localStorage) {
-                    if (key.startsWith(CACHE_PREFIX)) {
+                    if (localStorage.hasOwnProperty(key) && key.startsWith(CACHE_PREFIX)) {
                         total += localStorage.getItem(key).length;
                     }
                 }
@@ -804,14 +894,19 @@
             }
 
             onMounted(async () => {
-                // Online/offline listeners
+                // Listeners online/offline
                 window.addEventListener('online', () => { isOffline.value = false; });
                 window.addEventListener('offline', () => { isOffline.value = true; });
 
+                // Charger la liste des sourates
                 const cached = localStorage.getItem('surahList');
                 if (cached) {
-                    surahList.value = JSON.parse(cached);
-                } else {
+                    try {
+                        surahList.value = JSON.parse(cached);
+                    } catch {}
+                }
+                
+                if (!surahList.value.length) {
                     try {
                         const res = await fetchSafe(API.alquran.surahList);
                         surahList.value = res.data.map(x => ({
@@ -822,7 +917,7 @@
                         }));
                         localStorage.setItem('surahList', JSON.stringify(surahList.value));
                     } catch (e) {
-                        console.error('Failed to load surahs');
+                        console.error('Échec du chargement des sourates:', e);
                     }
                 }
                 
@@ -873,9 +968,13 @@
                                     pool.value.push(`${a.surah.number}:${a.numberInSurah}`);
                                 }
                             });
-                        } catch (e) {}
+                        } catch (e) {
+                            console.error(`Erreur chargement Juz ${j}:`, e);
+                        }
                     }
                 }
+                
+                // Mélanger aléatoirement
                 pool.value.sort(() => Math.random() - 0.5);
                 view.value = 'card';
                 loading.value = false;
@@ -910,6 +1009,7 @@
                 currentData.value = { arabic: '', tr: '', audio: '' };
 
                 if (!pool.value.length) return;
+                
                 let candidateIndex = Math.floor(Math.random() * pool.value.length);
                 let retries = 0;
                 while (retries < 5 && history.value.slice(-5).includes(pool.value[candidateIndex])) {
@@ -928,10 +1028,11 @@
                     chunkCursor.value = parseInt(a, 10) + 1;
                 } catch (e) {
                     currentData.value.arabic = 'Erreur de chargement.';
+                    console.error('Erreur chargement verset:', e);
                 }
                 loading.value = false;
 
-                // AUTO-PLAY LOGIC
+                // AUTO-PLAY
                 if (currentAudioUrl.value) {
                     setTimeout(() => {
                         if(audioPlayer.value && view.value === 'card') {
@@ -989,7 +1090,10 @@
                 if (audioPlayer.value.paused) audioPlayer.value.play();
                 else audioPlayer.value.pause();
             }
-            function audioEnded() { isPlaying.value = false; }
+            
+            function audioEnded() { 
+                isPlaying.value = false; 
+            }
 
             return {
                 view, mode, loading, isOffline, surahList, filteredSurahs, selectedSurahs, selectedJuz, searchQuery,
